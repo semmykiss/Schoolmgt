@@ -26,6 +26,8 @@ export function ExamsView() {
   const canWrite = useSession(s => s.can('exams.write'))
   const canMark = useSession(s => s.can('exams.marks'))
   const [tab, setTab] = useState('exams')
+  // Carry the broadsheet selection over to the report cards tab
+  const [reportsSeed, setReportsSeed] = useState<{ examId: string; classId: string } | null>(null)
 
   return (
     <motion.div
@@ -59,10 +61,10 @@ export function ExamsView() {
           <MarksTab canMark={canMark} />
         </TabsContent>
         <TabsContent value="broadsheet" className="mt-4">
-          <BroadsheetTab canWrite={canWrite} onGoReports={() => setTab('report-cards')} />
+          <BroadsheetTab canWrite={canWrite} onGoReports={(examId, classId) => { setReportsSeed({ examId, classId }); setTab('report-cards') }} />
         </TabsContent>
         <TabsContent value="report-cards" className="mt-4">
-          <ReportCardsTab canWrite={canWrite} />
+          <ReportCardsTab canWrite={canWrite} seed={reportsSeed} />
         </TabsContent>
         <TabsContent value="setup" className="mt-4">
           <SetupTab canWrite={canWrite} />

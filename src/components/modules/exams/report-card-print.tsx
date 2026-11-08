@@ -32,7 +32,7 @@ interface PrintPayload {
   classSize: number
   subjects: {
     subject: string; subjectCode: string | null
-    marksObtained: number; maxMarks: number; grade: string | null; remark: string | null
+    marksObtained: number; maxMarks: number; absent: boolean; grade: string | null; remark: string | null
     teacher: string | null
   }[]
   bands: { grade: string; minScore: number; maxScore: number; remark: string }[]
@@ -94,7 +94,6 @@ function CardBody({ data }: { data: PrintPayload }) {
       {/* ── Letterhead ── */}
       <header className="flex items-center gap-4 border-b-4 pb-4" style={{ borderColor: primary }}>
         {school?.logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img src={school.logoUrl} alt={`${school.name} logo`} className="h-16 w-16 rounded-full object-cover" />
         ) : (
           <div
@@ -152,7 +151,9 @@ function CardBody({ data }: { data: PrintPayload }) {
           {subjects.map((s, i) => (
             <tr key={i} className={i % 2 ? 'bg-neutral-50' : ''}>
               <td className="border px-2 py-1.5">{s.subject}</td>
-              <td className="border px-2 py-1.5 text-center font-semibold tabular-nums">{s.marksObtained}</td>
+              <td className="border px-2 py-1.5">
+                {s.absent ? <span title="Absent">AB</span> : <span className="font-semibold tabular-nums">{s.marksObtained}</span>}
+              </td>
               <td className="border px-2 py-1.5 text-center tabular-nums">{s.maxMarks}</td>
               <td className="border px-2 py-1.5 text-center font-bold" style={{ color: gradeColor(s.grade, primary) }}>{s.grade ?? '—'}</td>
               <td className="border px-2 py-1.5">{s.remark ?? ''}</td>

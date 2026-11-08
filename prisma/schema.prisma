@@ -566,6 +566,7 @@ model ExamResult {
   classSubjectId String
   marksObtained  Float
   maxMarks       Int     @default(100)
+  absent         Boolean @default(false) // student did not sit the paper (recorded as 0)
   grade          String? // computed from default grading scale
   remark         String?
   enteredById    String?

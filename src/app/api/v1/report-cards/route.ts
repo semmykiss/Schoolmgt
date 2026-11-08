@@ -50,6 +50,8 @@ export const GET = createHandler({ permission: 'exams.read' }, async ({ user, qu
           },
         },
         orderBy: { classSubject: { subject: { name: 'asc' } } },
+        // absent flag needed so the printout shows AB instead of a raw zero
+        // (Prisma include returns it alongside classSubject)
       }),
       // Ranked pool: students who actually have report cards (scores) in this exam
       db.reportCard.count({ where: { schoolId: user.schoolId, examId: examId, student: { classId: student.class?.id ?? 'none' } } }),
@@ -71,6 +73,7 @@ export const GET = createHandler({ permission: 'exams.read' }, async ({ user, qu
         subjectCode: r.classSubject.subject.code,
         marksObtained: r.marksObtained,
         maxMarks: r.maxMarks,
+        absent: r.absent,
         grade: r.grade,
         remark: r.remark,
         teacher: r.classSubject.teacher ? [r.classSubject.teacher.firstName, r.classSubject.teacher.lastName].filter(Boolean).join(' ') : null,
@@ -108,7 +111,10 @@ export const POST = createHandler({ permission: 'exams.write', body: reportCardG
 
   const exam = await db.exam.findFirst({
     where: { id: examId, schoolId: user.schoolId },
-    select: { id: true, name: true, publishResults: true },
+    select: {
+      id: true, name: true, publishResults: true,
+      term: { select: { startDate: true, endDate: true } },
+    },
   })
   if (!exam) throw notFound('Exam not found')
 
@@ -145,6 +151,38 @@ export const POST = createHandler({ permission: 'exams.write', body: reportCardG
   const bands = scale?.bands ?? []
   const classSize = ranked.length
 
+  // ── Attendance summary per student over the exam's term window ───────────
+  const studentIds = ranked.map(r => r.studentId)
+  const termFrom = exam.term?.startDate ?? null
+  const termTo = exam.term?.endDate ?? null
+  const attRows = studentIds.length > 0
+    ? await db.studentAttendance.findMany({
+        where: {
+          schoolId: user.schoolId,
+          studentId: { in: studentIds },
+          ...(termFrom && termTo ? { date: { gte: termFrom, lte: termTo } } : {}),
+        },
+        select: { studentId: true, status: true },
+      })
+    : []
+  const attByStudent = new Map<string, { total: number; present: number; late: number; excused: number }>()
+  for (const a of attRows) {
+    const t = attByStudent.get(a.studentId) ?? { total: 0, present: 0, late: 0, excused: 0 }
+    t.total++
+    if (a.status === 'PRESENT') t.present++
+    else if (a.status === 'LATE') t.late++
+    else if (a.status === 'EXCUSED') t.excused++
+    attByStudent.set(a.studentId, t)
+  }
+  const attendanceSummaryFor = (studentId: string): string | null => {
+    const t = attByStudent.get(studentId)
+    if (!t || t.total === 0) return null
+    const parts = [`Present ${t.present}/${t.total}`]
+    if (t.late > 0) parts.push(`Late ${t.late}`)
+    if (t.excused > 0) parts.push(`Excused ${t.excused}`)
+    return parts.join(', ')
+  }
+
   const existing = await db.reportCard.findMany({
     where: { schoolId: user.schoolId, examId, student: { classId } },
     select: { id: true, studentId: true, teacherRemark: true, principalRemark: true, published: true },
@@ -160,6 +198,7 @@ export const POST = createHandler({ permission: 'exams.write', body: reportCardG
       average: r.average,
       position: r.position,
       grade: band?.grade ?? null,
+      attendanceSummary: attendanceSummaryFor(r.studentId),
       teacherRemark: prev?.teacherRemark ?? remarkForAverage(r.average),
       principalRemark: prev?.principalRemark ?? remarkForPrincipal(r.position, classSize),
     }

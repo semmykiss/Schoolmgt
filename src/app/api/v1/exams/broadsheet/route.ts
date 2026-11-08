@@ -48,7 +48,7 @@ export const GET = createHandler({ permission: 'exams.read' }, async ({ user, qu
     }),
     db.examResult.findMany({
       where: { schoolId: user.schoolId, examId, classSubject: { classId } },
-      select: { studentId: true, classSubjectId: true, marksObtained: true, maxMarks: true, grade: true, remark: true },
+      select: { studentId: true, classSubjectId: true, marksObtained: true, maxMarks: true, absent: true, grade: true, remark: true },
     }),
     db.reportCard.findMany({
       where: { schoolId: user.schoolId, examId, student: { classId } },
@@ -56,11 +56,11 @@ export const GET = createHandler({ permission: 'exams.read' }, async ({ user, qu
     }),
   ])
 
-  const byStudent = new Map<string, Map<string, { marksObtained: number; maxMarks: number; grade: string | null; remark: string | null }>>()
+  const byStudent = new Map<string, Map<string, { marksObtained: number; maxMarks: number; absent: boolean; grade: string | null; remark: string | null }>>()
   for (const r of results) {
     if (!byStudent.has(r.studentId)) byStudent.set(r.studentId, new Map())
     byStudent.get(r.studentId)!.set(r.classSubjectId, {
-      marksObtained: r.marksObtained, maxMarks: r.maxMarks, grade: r.grade, remark: r.remark,
+      marksObtained: r.marksObtained, maxMarks: r.maxMarks, absent: r.absent, grade: r.grade, remark: r.remark,
     })
   }
 
@@ -72,7 +72,7 @@ export const GET = createHandler({ permission: 'exams.read' }, async ({ user, qu
       const cell = cells.get(col.classSubjectId) ?? null
       if (cell) { total += cell.marksObtained; scored++ }
       return cell ? {
-        marksObtained: cell.marksObtained, maxMarks: cell.maxMarks, grade: cell.grade, remark: cell.remark,
+        marksObtained: cell.marksObtained, maxMarks: cell.maxMarks, absent: cell.absent, grade: cell.grade, remark: cell.remark,
       } : null
     })
     const card = cards.find(c => c.studentId === s.id)

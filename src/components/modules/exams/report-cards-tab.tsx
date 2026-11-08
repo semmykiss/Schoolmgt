@@ -37,10 +37,10 @@ interface CardRow {
 interface ExamListRow { id: string; name: string; term: { name: string; session: { name: string } }; publishResults: boolean }
 interface ClassRow { id: string; name: string; level: number }
 
-export function ReportCardsTab({ canWrite }: { canWrite: boolean }) {
+export function ReportCardsTab({ canWrite, seed }: { canWrite: boolean; seed?: { examId: string; classId: string } | null }) {
   const qc = useQueryClient()
-  const [examId, setExamId] = useState('NONE')
-  const [classId, setClassId] = useState('NONE')
+  const [examId, setExamId] = useState(seed?.examId ?? 'NONE')
+  const [classId, setClassId] = useState(seed?.classId ?? 'NONE')
   const [printTarget, setPrintTarget] = useState<{ examId: string; studentId: string } | null>(null)
   const [remarkTarget, setRemarkTarget] = useState<CardRow | null>(null)
 
@@ -207,7 +207,7 @@ function RemarkDialog({ target, onOpenChange, canWrite }: {
     }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['exams'] })
-      onOpenChange()
+      onOpenChange(false)
       toast.success('Remarks saved')
     },
     onError: e => toast.error(e instanceof Error ? e.message : 'Save failed'),

@@ -29,9 +29,10 @@ interface ScaleRow { id: string; name: string; isDefault: boolean; bands: BandRo
 // ── Exam types ──────────────────────────────────────────────────────────────
 const typeSchema = z.object({
   name: z.string().min(2, 'Name is required').max(80),
-  weight: z.coerce.number({ invalid_type_error: 'Enter a number' }).int().min(1, 'Between 1 and 100').max(100, 'Between 1 and 100'),
+  weight: z.coerce.number({ error: 'Enter a number' }).int().min(1, 'Between 1 and 100').max(100, 'Between 1 and 100'),
 })
-type TypeForm = z.infer<typeof typeSchema>
+type TypeFormInput = z.input<typeof typeSchema>
+type TypeForm = z.output<typeof typeSchema>
 
 function ExamTypesCard({ canWrite }: { canWrite: boolean }) {
   const qc = useQueryClient()
@@ -45,7 +46,7 @@ function ExamTypesCard({ canWrite }: { canWrite: boolean }) {
   })
   const types = data?.items ?? []
 
-  const form = useForm<TypeForm>({
+  const form = useForm<TypeFormInput, unknown, TypeForm>({
     resolver: zodResolver(typeSchema),
     defaultValues: { name: '', weight: 100 },
   })
@@ -130,12 +131,12 @@ function ExamTypesCard({ canWrite }: { canWrite: boolean }) {
             <div className="space-y-1.5">
               <Label htmlFor="et-name">Name</Label>
               <Input id="et-name" {...form.register('name')} aria-invalid={!!form.formState.errors.name} />
-              <FieldError error={form.formState.errors.name?.message} />
+              <FieldError message={form.formState.errors.name?.message} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="et-weight">Weight (%)</Label>
               <Input id="et-weight" type="number" min={1} max={100} {...form.register('weight')} aria-invalid={!!form.formState.errors.weight} />
-              <FieldError error={form.formState.errors.weight?.message} />
+              <FieldError message={form.formState.errors.weight?.message} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
@@ -164,8 +165,8 @@ function ExamTypesCard({ canWrite }: { canWrite: boolean }) {
 // ── Grading scales ──────────────────────────────────────────────────────────
 const bandSchema = z.object({
   grade: z.string().min(1, 'Required').max(8),
-  minScore: z.coerce.number({ invalid_type_error: '0–100' }).int().min(0).max(100),
-  maxScore: z.coerce.number({ invalid_type_error: '0–100' }).int().min(0).max(100),
+  minScore: z.coerce.number({ error: '0–100' }).int().min(0).max(100),
+  maxScore: z.coerce.number({ error: '0–100' }).int().min(0).max(100),
   remark: z.string().min(1, 'Required').max(40),
 })
 const scaleSchema = z.object({
@@ -173,7 +174,8 @@ const scaleSchema = z.object({
   isDefault: z.boolean(),
   bands: z.array(bandSchema).min(1, 'Add at least one band'),
 })
-type ScaleForm = z.infer<typeof scaleSchema>
+type ScaleFormInput = z.input<typeof scaleSchema>
+type ScaleForm = z.output<typeof scaleSchema>
 
 function GradingScalesCard({ canWrite }: { canWrite: boolean }) {
   const qc = useQueryClient()
@@ -187,7 +189,7 @@ function GradingScalesCard({ canWrite }: { canWrite: boolean }) {
   })
   const scales = data?.items ?? []
 
-  const form = useForm<ScaleForm>({
+  const form = useForm<ScaleFormInput, unknown, ScaleForm>({
     resolver: zodResolver(scaleSchema),
     defaultValues: { name: '', isDefault: false, bands: [] },
   })
@@ -297,7 +299,7 @@ function GradingScalesCard({ canWrite }: { canWrite: boolean }) {
               <div className="min-w-48 flex-1 space-y-1.5">
                 <Label htmlFor="gs-name">Scale name</Label>
                 <Input id="gs-name" placeholder="WAEC Standard" {...form.register('name')} aria-invalid={!!form.formState.errors.name} />
-                <FieldError error={form.formState.errors.name?.message} />
+                <FieldError message={form.formState.errors.name?.message} />
               </div>
               <label className="flex items-center gap-2 pb-2.5 text-sm">
                 <Switch
@@ -327,19 +329,19 @@ function GradingScalesCard({ canWrite }: { canWrite: boolean }) {
                     <div key={i} className="grid grid-cols-[70px_80px_80px_1fr_36px] items-start gap-2">
                       <div>
                         <Input placeholder="A1" {...form.register(`bands.${i}.grade`)} aria-label={`Band ${i + 1} grade`} />
-                        <FieldError error={err?.grade?.message} />
+                        <FieldError message={err?.grade?.message} />
                       </div>
                       <div>
                         <Input type="number" placeholder="Min" {...form.register(`bands.${i}.minScore`)} aria-label={`Band ${i + 1} minimum score`} />
-                        <FieldError error={err?.minScore?.message} />
+                        <FieldError message={err?.minScore?.message} />
                       </div>
                       <div>
                         <Input type="number" placeholder="Max" {...form.register(`bands.${i}.maxScore`)} aria-label={`Band ${i + 1} maximum score`} />
-                        <FieldError error={err?.maxScore?.message} />
+                        <FieldError message={err?.maxScore?.message} />
                       </div>
                       <div>
                         <Input placeholder="Remark e.g. Excellent" {...form.register(`bands.${i}.remark`)} aria-label={`Band ${i + 1} remark`} />
-                        <FieldError error={err?.remark?.message} />
+                        <FieldError message={err?.remark?.message} />
                       </div>
                       <Button
                         type="button" variant="ghost" size="icon"

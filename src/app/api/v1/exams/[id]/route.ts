@@ -3,6 +3,7 @@ import { createHandler } from '@/lib/api/handler'
 import { notFound, badRequest } from '@/lib/api/errors'
 import { requireId } from '@/lib/api/paginate'
 import { examUpdateSchema } from '@/lib/validation/exams'
+import type { Prisma } from '@prisma/client'
 
 const getId = (p: Record<string, string>) => requireId(p.id, 'Exam')
 
@@ -23,7 +24,7 @@ const detailInclude = {
     },
   },
   _count: { select: { results: true, reportCards: true } },
-} as const
+} satisfies Prisma.ExamInclude
 
 export const GET = createHandler({ permission: 'exams.read' }, async ({ user, params }) => {
   const id = getId(params as Record<string, string>)

@@ -18,7 +18,7 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { gradeTone, ordinal, fmtNum, downloadCsv } from './exam-helpers'
 
-interface BroadsheetCell { marksObtained: number; maxMarks: number; grade: string | null; remark: string | null }
+interface BroadsheetCell { marksObtained: number; maxMarks: number; absent: boolean; grade: string | null; remark: string | null }
 interface BroadsheetRow {
   studentId: string
   admissionNumber: string
@@ -44,7 +44,7 @@ interface BroadsheetPayload {
 interface ExamListRow { id: string; name: string; term: { name: string; session: { name: string } } }
 interface ClassRow { id: string; name: string; level: number }
 
-export function BroadsheetTab({ canWrite, onGoReports }: { canWrite: boolean; onGoReports: () => void }) {
+export function BroadsheetTab({ canWrite, onGoReports }: { canWrite: boolean; onGoReports: (examId: string, classId: string) => void }) {
   const qc = useQueryClient()
   const [examId, setExamId] = useState('NONE')
   const [classId, setClassId] = useState('NONE')
@@ -74,7 +74,7 @@ export function BroadsheetTab({ canWrite, onGoReports }: { canWrite: boolean; on
       void qc.invalidateQueries({ queryKey: ['exams'] })
       setGenerateOpen(false)
       toast.success(`${r.generated} report card${r.generated === 1 ? '' : 's'} generated`)
-      onGoReports()
+      onGoReports(examId, classId)
     },
     onError: e => toast.error(e instanceof Error ? e.message : 'Generation failed'),
   })
@@ -84,7 +84,7 @@ export function BroadsheetTab({ canWrite, onGoReports }: { canWrite: boolean; on
     const headers = ['Admission No', 'Student', ...sheet.columns.map(c => `${c.subjectName} (/${c.maxMarks})`), 'Total', 'Average', 'Position', 'Grade']
     const rows = sheet.rows.map(r => [
       r.admissionNumber, r.fullName,
-      ...r.subjects.map(c => c ? c.marksObtained : ''),
+      ...r.subjects.map(c => c ? (c.absent ? 'AB' : c.marksObtained) : ''),
       r.scoredSubjects > 0 ? r.total : '',
       r.average ?? '',
       r.position ?? r.livePosition ?? '',
@@ -208,14 +208,20 @@ export function BroadsheetTab({ canWrite, onGoReports }: { canWrite: boolean; on
                     {r.subjects.map((cell, j) => (
                       <td key={j} className="px-2 py-2 text-center tabular-nums">
                         {cell ? (
-                          <span className={cn(
-                            'inline-block rounded px-1.5 py-0.5',
-                            cell.marksObtained < sheet!.columns[j].passMarks
-                              ? 'bg-destructive/10 text-destructive'
-                              : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
-                          )}>
-                            {cell.marksObtained}
-                          </span>
+                          cell.absent ? (
+                            <span className="inline-block rounded bg-amber-500/10 px-1.5 py-0.5 text-amber-700 dark:text-amber-400" title="Absent">
+                              AB
+                            </span>
+                          ) : (
+                            <span className={cn(
+                              'inline-block rounded px-1.5 py-0.5',
+                              cell.marksObtained < sheet!.columns[j].passMarks
+                                ? 'bg-destructive/10 text-destructive'
+                                : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+                            )}>
+                              {cell.marksObtained}
+                            </span>
+                          )
                         ) : (
                           <span className="text-muted-foreground/50">—</span>
                         )}

@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { CalendarRange, ClipboardList, Eye, FileSignature, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
+import { CalendarRange, ClipboardList, Clock, Eye, FileSignature, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { api, qk } from '@/lib/client/api'
 import { useSession } from '@/stores/session'
@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/select'
 import { TERM_LABEL } from '@/components/modules/academics/academic-helpers'
 import { FieldError } from '@/components/shared/field-error'
+import { cn } from '@/lib/utils'
 
 interface ExamRow {
   id: string
@@ -61,6 +62,7 @@ export function ExamsTab({ canWrite, onGoMarks }: { canWrite: boolean; onGoMarks
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<ExamRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ExamRow | null>(null)
+  const [papersTarget, setPapersTarget] = useState<ExamRow | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: qk.exams(),
@@ -184,6 +186,17 @@ export function ExamsTab({ canWrite, onGoMarks }: { canWrite: boolean; onGoMarks
       header: '',
       cell: ({ row }) => (
         <div className="flex justify-end gap-1">
+          <Button
+            variant="ghost" size="icon"
+            aria-label={`Manage papers for ${row.original.name}`}
+            title={row.original._count.schedules === 0 ? 'No papers yet — build the exam timetable' : 'Exam timetable (papers)'}
+            onClick={() => setPapersTarget(row.original)}
+          >
+            <CalendarRange
+              className={cn('h-4 w-4', row.original._count.schedules === 0 ? 'text-amber-500' : 'text-muted-foreground')}
+              aria-hidden
+            />
+          </Button>
           {canMark && (
             <Button variant="ghost" size="icon" aria-label={`Enter marks for ${row.original.name}`} onClick={onGoMarks} title="Go to Marks Entry">
               <FileSignature className="h-4 w-4 text-muted-foreground" aria-hidden />
@@ -215,7 +228,7 @@ export function ExamsTab({ canWrite, onGoMarks }: { canWrite: boolean; onGoMarks
         <StatCard label="Exams" value={data?.total ?? 0} icon={ClipboardList} loading={!data} />
         <StatCard label="Published" value={data?.published ?? 0} icon={Eye} tone="success" loading={!data} />
         <StatCard label="Papers scheduled" value={totals.papers} icon={CalendarRange} loading={!data} />
-        <StatCard label="Scores recorded" value={totals.scores} icon={FileSignature} tone="info" loading={!data} />
+        <StatCard label="Scores recorded" value={totals.scores} icon={FileSignature} tone="primary" loading={!data} />
       </div>
 
       <div className="rounded-xl border bg-card">
@@ -267,6 +280,14 @@ export function ExamsTab({ canWrite, onGoMarks }: { canWrite: boolean; onGoMarks
         confirmLabel="Delete exam"
         destructive
         onConfirm={async () => { if (deleteTarget) await remove.mutateAsync(deleteTarget.id) }}
+      />
+
+      <PapersDialog
+        exam={papersTarget}
+        open={!!papersTarget}
+        onOpenChange={o => { if (!o) setPapersTarget(null) }}
+        canWrite={canWrite}
+        onChanged={invalidate}
       />
     </div>
   )
@@ -338,7 +359,7 @@ function ExamDialog({ open, onOpenChange, editTarget, examTypes, terms, onDone }
           <div className="space-y-1.5">
             <Label htmlFor="exam-name">Name</Label>
             <Input id="exam-name" placeholder="First Term Examination — 2024/2025" {...form.register('name')} aria-invalid={!!errs.name} />
-            <FieldError error={errs.name?.message} />
+            <FieldError message={errs.name?.message} />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
@@ -353,7 +374,7 @@ function ExamDialog({ open, onOpenChange, editTarget, examTypes, terms, onDone }
                   ))}
                 </SelectContent>
               </Select>
-              <FieldError error={errs.termId?.message} />
+              <FieldError message={errs.termId?.message} />
             </div>
             <div className="space-y-1.5">
               <Label>Type</Label>
@@ -363,7 +384,7 @@ function ExamDialog({ open, onOpenChange, editTarget, examTypes, terms, onDone }
                   {examTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.name} ({t.weight}%)</SelectItem>)}
                 </SelectContent>
               </Select>
-              <FieldError error={errs.examTypeId?.message} />
+              <FieldError message={errs.examTypeId?.message} />
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -374,7 +395,7 @@ function ExamDialog({ open, onOpenChange, editTarget, examTypes, terms, onDone }
             <div className="space-y-1.5">
               <Label htmlFor="exam-end">Ends (optional)</Label>
               <Input id="exam-end" type="date" {...form.register('endDate')} />
-              <FieldError error={errs.endDate?.message} />
+              <FieldError message={errs.endDate?.message} />
             </div>
           </div>
           <DialogFooter>
@@ -387,5 +408,304 @@ function ExamDialog({ open, onOpenChange, editTarget, examTypes, terms, onDone }
         </form>
       </DialogContent>
     </Dialog>
+  )
+}
+
+// ── Exam timetable (papers) dialog ──────────────────────────────────────────
+interface ScheduleRow {
+  id: string
+  date: string
+  startTime: string
+  endTime: string
+  maxMarks: number
+  passMarks: number
+  classSubject: {
+    id: string
+    subject: { name: string; code: string | null }
+    class: { id: string; name: string }
+    teacher: { id: string; firstName: string; lastName: string } | null
+  }
+}
+interface ClassOption { id: string; name: string; level: number }
+interface ClassSubjectOption {
+  id: string
+  subject: { name: string; code: string | null }
+  teacher: { fullName: string } | null
+}
+
+function PapersDialog({ exam, open, onOpenChange, canWrite, onChanged }: {
+  exam: ExamRow | null
+  open: boolean
+  onOpenChange: (o: boolean) => void
+  canWrite: boolean
+  onChanged: () => void
+}) {
+  const qc = useQueryClient()
+  const examId = exam?.id ?? ''
+  const [formOpen, setFormOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<ScheduleRow | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ScheduleRow | null>(null)
+  const [classId, setClassId] = useState('NONE')
+  const [classSubjectId, setClassSubjectId] = useState('NONE')
+  const [date, setDate] = useState('')
+  const [startTime, setStartTime] = useState('09:00')
+  const [endTime, setEndTime] = useState('11:00')
+  const [maxMarks, setMaxMarks] = useState('100')
+  const [passMarks, setPassMarks] = useState('40')
+  const [formError, setFormError] = useState('')
+
+  const { data, isLoading } = useQuery({
+    queryKey: qk.examSchedules(open && examId ? examId : undefined),
+    queryFn: () => api<{ items: ScheduleRow[] }>('/exams/schedules', { query: { examId } }),
+    enabled: open && !!examId,
+  })
+  const schedules = data?.items ?? []
+
+  const { data: classesData } = useQuery({
+    queryKey: qk.classes(),
+    queryFn: () => api<{ items: ClassOption[] }>('/academics/classes'),
+    enabled: open,
+  })
+  const classes = useMemo(() => (classesData?.items ?? []).slice().sort((a, b) => a.level - b.level), [classesData])
+
+  const { data: csData, isLoading: csLoading } = useQuery({
+    queryKey: qk.classSubjects(classId === 'NONE' ? undefined : classId),
+    queryFn: () => api<{ items: ClassSubjectOption[] }>('/academics/class-subjects', { query: { classId } }),
+    enabled: open && formOpen && classId !== 'NONE',
+  })
+  const classSubjects = csData?.items ?? []
+
+  const closeForm = () => { setFormOpen(false); setEditTarget(null); setFormError('') }
+
+  const openAdd = () => {
+    setEditTarget(null)
+    setClassId('NONE')
+    setClassSubjectId('NONE')
+    setDate(exam?.startDate ?? '')
+    setStartTime('09:00')
+    setEndTime('11:00')
+    setMaxMarks('100')
+    setPassMarks('40')
+    setFormError('')
+    setFormOpen(true)
+  }
+
+  const openEdit = (s: ScheduleRow) => {
+    setEditTarget(s)
+    setClassId(s.classSubject.class.id)
+    setClassSubjectId(s.classSubject.id)
+    setDate(s.date)
+    setStartTime(s.startTime)
+    setEndTime(s.endTime)
+    setMaxMarks(String(s.maxMarks))
+    setPassMarks(String(s.passMarks))
+    setFormError('')
+    setFormOpen(true)
+  }
+
+  const validate = (): string => {
+    if (classId === 'NONE' || classSubjectId === 'NONE') return 'Select the class and subject for this paper'
+    if (!date) return 'Pick the exam date'
+    if (!startTime || !endTime) return 'Set both the start and end time'
+    if (startTime >= endTime) return 'End time must be after the start time'
+    const max = Number(maxMarks)
+    const pass = Number(passMarks)
+    if (!Number.isFinite(max) || max < 1 || max > 1000) return 'Max marks must be between 1 and 1000'
+    if (!Number.isFinite(pass) || pass < 0 || pass > max) return 'Pass marks must be between 0 and the max marks'
+    return ''
+  }
+
+  const save = useMutation({
+    mutationFn: () => {
+      const body = {
+        ...(editTarget ? {} : { examId }),
+        classSubjectId,
+        date,
+        startTime,
+        endTime,
+        maxMarks: Number(maxMarks),
+        passMarks: Number(passMarks),
+      }
+      return editTarget
+        ? api(`/exams/schedules/${editTarget.id}`, { method: 'PATCH', body })
+        : api('/exams/schedules', { method: 'POST', body })
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['exams'] })
+      onChanged()
+      closeForm()
+      toast.success(editTarget ? 'Paper updated' : 'Paper scheduled')
+    },
+    onError: e => setFormError(e instanceof Error ? e.message : 'Save failed'),
+  })
+
+  const remove = useMutation({
+    mutationFn: (id: string) => api(`/exams/schedules/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['exams'] })
+      onChanged()
+      setDeleteTarget(null)
+      toast.success('Paper removed from the timetable')
+    },
+    onError: e => { setDeleteTarget(null); toast.error(e instanceof Error ? e.message : 'Delete failed') },
+  })
+
+  const grouped = useMemo(() => {
+    const m = new Map<string, ScheduleRow[]>()
+    for (const s of schedules) {
+      const list = m.get(s.date) ?? []
+      list.push(s)
+      m.set(s.date, list)
+    }
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  }, [schedules])
+
+  const classSubject = classSubjects.find(cs => cs.id === classSubjectId)
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={o => { onOpenChange(o); if (!o) closeForm() }}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Exam timetable — {exam?.name ?? ''}</DialogTitle>
+            <DialogDescription>
+              Schedule one paper per class subject with its date, time and marks. Marks entry needs at least one paper.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-80 space-y-3 overflow-y-auto pr-1 [scrollbar-width:thin]" aria-label="Exam papers">
+            {isLoading ? (
+              <div className="flex h-24 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden /></div>
+            ) : grouped.length === 0 ? (
+              <p className="rounded-lg border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
+                No papers yet. Add the first paper to unlock marks entry for this exam.
+              </p>
+            ) : (
+              grouped.map(([day, rows]) => (
+                <div key={day} className="space-y-1.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{fmtDate(day)}</p>
+                  <ul className="space-y-1.5" role="list" aria-label={`Papers on ${day}`}>
+                    {rows.map(s => (
+                      <li key={s.id} className="flex flex-col gap-1.5 rounded-lg border px-3 py-2 sm:flex-row sm:items-center sm:gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">
+                            {s.classSubject.class.name} — {s.classSubject.subject.name}
+                            {s.classSubject.subject.code ? ` (${s.classSubject.subject.code})` : ''}
+                          </p>
+                          <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" aria-hidden />
+                            {s.startTime}–{s.endTime} · Max {s.maxMarks} · Pass {s.passMarks}
+                            {s.classSubject.teacher ? ` · ${s.classSubject.teacher.firstName} ${s.classSubject.teacher.lastName}` : ''}
+                          </p>
+                        </div>
+                        {canWrite && (
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" aria-label={`Edit ${s.classSubject.subject.name} paper`} onClick={() => openEdit(s)}>
+                              <Pencil className="h-4 w-4 text-muted-foreground" aria-hidden />
+                            </Button>
+                            <Button variant="ghost" size="icon" aria-label={`Remove ${s.classSubject.subject.name} paper`} onClick={() => setDeleteTarget(s)}>
+                              <Trash2 className="h-4 w-4 text-muted-foreground" aria-hidden />
+                            </Button>
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))
+            )}
+          </div>
+
+          {formOpen ? (
+            <form
+              className="space-y-3 rounded-xl border bg-muted/30 p-3"
+              onSubmit={e => { e.preventDefault(); const err = validate(); if (err) { setFormError(err); return } setFormError(''); save.mutate() }}
+              noValidate
+            >
+              <p className="text-sm font-semibold">{editTarget ? `Edit ${editTarget.classSubject.subject.name} paper` : 'Add a paper'}</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Class</Label>
+                  <Select value={classId} onValueChange={v => { setClassId(v); setClassSubjectId('NONE') }}>
+                    <SelectTrigger aria-label="Select class for the paper"><SelectValue placeholder="Pick a class" /></SelectTrigger>
+                    <SelectContent>
+                      {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Subject</Label>
+                  <Select value={classSubjectId} onValueChange={setClassSubjectId}>
+                    <SelectTrigger aria-label="Select subject for the paper"><SelectValue placeholder={classId === 'NONE' ? 'Pick a class first' : 'Pick a subject'} /></SelectTrigger>
+                    <SelectContent>
+                      {csLoading ? (
+                        <SelectItem value="LOADING" disabled>Loading…</SelectItem>
+                      ) : classSubjects.length === 0 ? (
+                        <SelectItem value="NONE" disabled>No subjects assigned to this class</SelectItem>
+                      ) : (
+                        classSubjects.map(cs => (
+                          <SelectItem key={cs.id} value={cs.id}>
+                            {cs.subject.name}{cs.subject.code ? ` (${cs.subject.code})` : ''}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {classSubject?.teacher && <p className="text-xs text-muted-foreground">Teacher: {classSubject.teacher.fullName}</p>}
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="paper-date">Date</Label>
+                  <Input id="paper-date" type="date" value={date} onChange={e => setDate(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="paper-start">Starts</Label>
+                  <Input id="paper-start" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="paper-end">Ends</Label>
+                  <Input id="paper-end" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="paper-max">Max marks</Label>
+                  <Input id="paper-max" type="number" min={1} max={1000} value={maxMarks} onChange={e => setMaxMarks(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="paper-pass">Pass marks</Label>
+                  <Input id="paper-pass" type="number" min={0} max={1000} value={passMarks} onChange={e => setPassMarks(e.target.value)} />
+                </div>
+              </div>
+              {formError && <FieldError message={formError} />}
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={closeForm}>Cancel</Button>
+                <Button type="submit" size="sm" disabled={save.isPending}>
+                  {save.isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+                  {editTarget ? 'Save paper' : 'Schedule paper'}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            canWrite && (
+              <Button onClick={openAdd} className="w-full sm:w-auto">
+                <Plus aria-hidden /> Add paper
+              </Button>
+            )
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={o => { if (!o) setDeleteTarget(null) }}
+        title={`Remove ${deleteTarget?.classSubject.subject.name ?? ''} paper?`}
+        description="Papers with scores already entered cannot be removed — clear those scores first."
+        confirmLabel="Remove paper"
+        destructive
+        onConfirm={async () => { if (deleteTarget) await remove.mutateAsync(deleteTarget.id) }}
+      />
+    </>
   )
 }

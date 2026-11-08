@@ -48,7 +48,7 @@ export const GET = createHandler({ permission: 'exams.marks' }, async ({ user, p
     }),
     db.examResult.findMany({
       where: { schoolId: user.schoolId, examId, classSubjectId },
-      select: { studentId: true, marksObtained: true, grade: true, remark: true, updatedAt: true },
+      select: { studentId: true, marksObtained: true, absent: true, grade: true, remark: true, updatedAt: true },
     }),
   ])
 
@@ -60,6 +60,7 @@ export const GET = createHandler({ permission: 'exams.marks' }, async ({ user, p
       admissionNumber: s.admissionNumber,
       fullName: [s.firstName, s.lastName].filter(Boolean).join(' '),
       marks: saved ? saved.marksObtained : null,
+      absent: saved?.absent ?? false,
       grade: saved?.grade ?? null,
       remark: saved?.remark ?? null,
       savedAt: saved?.updatedAt ?? null,
@@ -108,7 +109,7 @@ export const POST = createHandler({ permission: 'exams.marks', body: marksEntryS
   const bands = scale?.bands ?? []
   const studentIds = new Set(
     (await db.student.findMany({
-      where: { schoolId: user.schoolId, classId: classSubject.classId },
+      where: { schoolId: user.schoolId, classId: classSubject.classId, status: 'ACTIVE' },
       select: { id: true },
     })).map(s => s.id),
   )
@@ -119,18 +120,19 @@ export const POST = createHandler({ permission: 'exams.marks', body: marksEntryS
     if (!studentIds.has(row.studentId)) {
       throw badRequest('One of the students does not belong to this class — refresh the marks sheet.')
     }
-    const marks = row.absent ? 0 : Math.min(maxMarks, Math.max(0, row.marks))
-    const band = gradeFor(marks, maxMarks, bands)
-    const remark = band?.remark ?? (marks / maxMarks >= 0.5 ? remarkForAverage((marks / maxMarks) * 100) : 'Below pass mark')
+    const absent = row.absent ?? false
+    const marks = absent ? 0 : Math.min(maxMarks, Math.max(0, row.marks))
+    const band = absent ? null : gradeFor(marks, maxMarks, bands)
+    const remark = absent ? 'Absent' : band?.remark ?? (marks / maxMarks >= 0.5 ? remarkForAverage((marks / maxMarks) * 100) : 'Below pass mark')
     await db.examResult.upsert({
       where: { examId_studentId_classSubjectId: { examId, studentId: row.studentId, classSubjectId: body.classSubjectId } },
       create: {
         schoolId: user.schoolId, examId, studentId: row.studentId, classSubjectId: body.classSubjectId,
-        marksObtained: marks, maxMarks, grade: band?.grade ?? null, remark,
+        marksObtained: marks, maxMarks, absent, grade: band?.grade ?? null, remark,
         enteredById: user.id,
       },
       update: {
-        marksObtained: marks, maxMarks, grade: band?.grade ?? null, remark,
+        marksObtained: marks, maxMarks, absent, grade: band?.grade ?? null, remark,
         enteredById: user.id,
       },
     })

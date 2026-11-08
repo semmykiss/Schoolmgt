@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
@@ -30,6 +31,7 @@ interface SheetPayload {
     admissionNumber: string
     fullName: string
     marks: number | null
+    absent: boolean
     grade: string | null
     remark: string | null
     savedAt: string | null
@@ -47,6 +49,7 @@ export function MarksTab({ canMark }: { canMark: boolean }) {
   const [classId, setClassId] = useState('NONE')
   const [classSubjectId, setClassSubjectId] = useState('NONE')
   const [draft, setDraft] = useState<Draft>({})
+  const [absent, setAbsent] = useState<Record<string, boolean>>({})
   const [dirty, setDirty] = useState(false)
 
   const { data: examsData } = useQuery({
@@ -97,8 +100,13 @@ export function MarksTab({ canMark }: { canMark: boolean }) {
   if (sheet && seededKey !== seedId) {
     setSeededKey(seedId)
     const next: Draft = {}
-    for (const r of sheet.roster) next[r.studentId] = r.marks === null ? '' : String(r.marks)
+    const nextAbsent: Record<string, boolean> = {}
+    for (const r of sheet.roster) {
+      next[r.studentId] = r.marks === null ? '' : String(r.marks)
+      if (r.absent) nextAbsent[r.studentId] = true
+    }
     setDraft(next)
+    setAbsent(nextAbsent)
     setDirty(false)
   }
 
@@ -111,21 +119,29 @@ export function MarksTab({ canMark }: { canMark: boolean }) {
   }
 
   const counts = useMemo(() => {
-    const entered = Object.values(draft).filter(v => v.trim() !== '' && Number.isFinite(Number(v))).length
+    const entered = Object.entries(draft).filter(([id, v]) =>
+      !absent[id] && v.trim() !== '' && Number.isFinite(Number(v)),
+    ).length
+    const absentCount = sheet ? sheet.roster.filter(r => absent[r.studentId]).length : 0
     const failing = Object.entries(draft).filter(([id, v]) => {
+      if (absent[id]) return false
       const n = Number(v)
       return v.trim() !== '' && Number.isFinite(n) && n < (sheet?.schedule.passMarks ?? 0)
     }).length
-    return { entered, total: sheet?.roster.length ?? 0, failing }
-  }, [draft, sheet])
+    return { entered, absent: absentCount, total: sheet?.roster.length ?? 0, failing, saveable: entered + absentCount }
+  }, [draft, absent, sheet])
 
   const save = useMutation({
     mutationFn: () => {
       if (!sheet) throw new Error('Sheet not loaded')
       const rows = sheet.roster
-        .filter(r => draft[r.studentId]?.trim() !== '')
-        .map(r => ({ studentId: r.studentId, marks: Number(draft[r.studentId]) }))
-      if (rows.length === 0) throw new Error('Enter at least one score')
+        .filter(r => absent[r.studentId] || (draft[r.studentId]?.trim() !== ''))
+        .map(r => ({
+          studentId: r.studentId,
+          marks: absent[r.studentId] ? 0 : Number(draft[r.studentId]),
+          absent: absent[r.studentId] ?? false,
+        }))
+      if (rows.length === 0) throw new Error('Enter at least one score or mark a student absent')
       return api<{ saved: number; graded: number }>(`/exams/${examId}/marks-sheet`, {
         method: 'POST',
         body: { classSubjectId, maxMarks: sheet.schedule.maxMarks, rows },
@@ -228,7 +244,9 @@ export function MarksTab({ canMark }: { canMark: boolean }) {
               <Badge variant="secondary" className="text-emerald-700 dark:text-emerald-400">Saved</Badge>
             )}
             <span className="text-xs text-muted-foreground tabular-nums">
-              {counts.entered}/{counts.total} entered{counts.failing > 0 ? ` · ${counts.failing} below pass` : ''}
+              {counts.entered}/{counts.total} entered
+              {counts.absent > 0 ? ` · ${counts.absent} absent` : ''}
+              {counts.failing > 0 ? ` · ${counts.failing} below pass` : ''}
             </span>
           </div>
 
@@ -237,36 +255,67 @@ export function MarksTab({ canMark }: { canMark: boolean }) {
             <ul className="divide-y" role="list" aria-label="Marks sheet">
               {sheet.roster.map((s, i) => {
                 const raw = draft[s.studentId] ?? ''
-                const preview = previewGrade(raw)
+                const isAbsent = !!absent[s.studentId]
+                const preview = isAbsent
+                  ? { grade: 'AB', remark: 'Absent' }
+                  : previewGrade(raw)
                 const num = Number(raw)
-                const belowPass = raw.trim() !== '' && Number.isFinite(num) && num < sheet.schedule.passMarks
+                const belowPass = !isAbsent && raw.trim() !== '' && Number.isFinite(num) && num < sheet.schedule.passMarks
                 return (
-                  <li key={s.studentId} className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3">
+                  <li key={s.studentId} className={cn('flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3', isAbsent && 'bg-muted/30')}>
                     <span className="w-6 shrink-0 text-xs text-muted-foreground">{i + 1}</span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{s.fullName}</p>
                       <p className="text-xs text-muted-foreground">{s.admissionNumber}</p>
                     </div>
                     {canMark ? (
-                      <>
-                        <div className="flex w-full items-center gap-2 sm:w-52">
-                          <Input
-                            inputMode="decimal"
-                            placeholder="—"
-                            value={raw}
-                            onChange={e => setMark(s.studentId, e.target.value)}
-                            className={cn('h-9 w-24 text-right tabular-nums', belowPass && 'border-destructive/50')}
-                            aria-label={`Score for ${s.fullName} (out of ${sheet.schedule.maxMarks})`}
+                      <div className="flex w-full items-center gap-2 sm:w-60">
+                        <Input
+                          inputMode="decimal"
+                          placeholder="—"
+                          value={isAbsent ? 'AB' : raw}
+                          onChange={e => setMark(s.studentId, e.target.value)}
+                          disabled={isAbsent}
+                          className={cn('h-9 w-20 text-right tabular-nums disabled:opacity-70', belowPass && 'border-destructive/50')}
+                          aria-label={isAbsent ? `${s.fullName} — absent` : `Score for ${s.fullName} (out of ${sheet.schedule.maxMarks})`}
+                        />
+                        <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+                          <Checkbox
+                            checked={isAbsent}
+                            onCheckedChange={v => {
+                              setAbsent(a => ({ ...a, [s.studentId]: v === true }))
+                              setDirty(true)
+                            }}
+                            disabled={sheet.exam.publishResults}
+                            aria-label={`Mark ${s.fullName} absent`}
+                            className="h-4 w-4"
                           />
-                          <div className="min-w-0">
-                            <span className={cn('block text-sm', gradeTone(preview.grade))}>{preview.grade ?? '—'}</span>
-                            <span className="block truncate text-xs text-muted-foreground">{preview.remark ?? ' '}</span>
-                          </div>
+                          <button
+                            type="button"
+                            tabIndex={-1}
+                            className="cursor-pointer select-none"
+                            onClick={() => {
+                              setAbsent(a => ({ ...a, [s.studentId]: !isAbsent }))
+                              setDirty(true)
+                            }}
+                          >
+                            Absent
+                          </button>
+                        </span>
+                        <div className="min-w-0">
+                          <span className={cn('block text-sm', isAbsent ? 'font-medium text-muted-foreground' : gradeTone(preview.grade))}>
+                            {preview.grade ?? '—'}
+                          </span>
+                          <span className="block truncate text-xs text-muted-foreground">{preview.remark ?? ' '}</span>
                         </div>
-                      </>
+                      </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold tabular-nums">{s.marks ?? '—'}</span>
+                        {s.absent ? (
+                          <Badge variant="outline" className="text-amber-700 dark:text-amber-400">Absent</Badge>
+                        ) : (
+                          <span className="text-sm font-semibold tabular-nums">{s.marks ?? '—'}</span>
+                        )}
                         <span className={cn('text-sm', gradeTone(s.grade))}>{s.grade ?? ''}</span>
                       </div>
                     )}
@@ -281,9 +330,9 @@ export function MarksTab({ canMark }: { canMark: boolean }) {
               <p className="text-xs text-muted-foreground">
                 {isFetching ? 'Refreshing…' : 'Grades are assigned automatically from the default grading scale when you save.'}
               </p>
-              <Button onClick={() => save.mutate()} disabled={save.isPending || !dirty || counts.entered === 0}>
+              <Button onClick={() => save.mutate()} disabled={save.isPending || !dirty || counts.saveable === 0}>
                 {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Save className="h-4 w-4" aria-hidden />}
-                {dirty ? `Save ${counts.entered} score${counts.entered === 1 ? '' : 's'}` : 'Saved'}
+                {dirty ? `Save ${counts.saveable} entr${counts.saveable === 1 ? 'y' : 'ies'}` : 'Saved'}
               </Button>
             </div>
           )}
