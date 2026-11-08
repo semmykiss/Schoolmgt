@@ -72,4 +72,17 @@ export const qk = {
   notifications: ['notifications'] as const,
   users: (filters?: Record<string, unknown>) => ['users', filters ?? {}] as const,
   roles: ['roles'] as const,
+  // academics
+  sessions: (filters?: Record<string, unknown>) => ['academic', 'sessions', filters ?? {}] as const,
+  terms: (sessionId?: string) => ['academic', 'terms', sessionId ?? 'all'] as const,
+  classes: (filters?: Record<string, unknown>) => ['academic', 'classes', filters ?? {}] as const,
+  subjects: (filters?: Record<string, unknown>) => ['academic', 'subjects', filters ?? {}] as const,
+  classSubjects: (classId?: string) => ['academic', 'class-subjects', classId ?? 'all'] as const,
+  lessonPlans: (filters?: Record<string, unknown>) => ['academic', 'lesson-plans', filters ?? {}] as const,
+  promotionPreview: (classId?: string) => ['academic', 'promotions', classId ?? 'none'] as const,
+  employees: (search?: string) => ['employees', search ?? ''] as const,
+  // admissions + students
+  applicants: (filters?: Record<string, unknown>) => ['admissions', 'applicants', filters ?? {}] as const,
+  students: (filters?: Record<string, unknown>) => ['students', filters ?? {}] as const,
+  student: (id?: string) => ['students', 'detail', id ?? 'none'] as const,
 }

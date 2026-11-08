@@ -5,6 +5,9 @@ import { DashboardView } from '@/components/modules/dashboard/dashboard-view'
 import { UsersView } from '@/components/modules/admin/users-view'
 import { RolesView } from '@/components/modules/admin/roles-view'
 import { ApiDocsView } from '@/components/modules/admin/api-docs-view'
+import { AcademicSetupView } from '@/components/modules/academics/academic-setup-view'
+import { AdmissionsView } from '@/components/modules/admissions/admissions-view'
+import { StudentsView } from '@/components/modules/students/students-view'
 import { ComingSoon } from '@/components/shared/coming-soon'
 
 /**
@@ -22,6 +25,12 @@ export function RouterView({ segments }: { segments: string[] }) {
       return <RolesView />
     case 'api-docs':
       return <ApiDocsView />
+    case 'academic':
+      return <AcademicSetupView />
+    case 'admissions':
+      return <AdmissionsView />
+    case 'students':
+      return <StudentsView />
     default:
       return <ComingSoon itemKey={MODULES[key] ? key : 'dashboard'} />
   }

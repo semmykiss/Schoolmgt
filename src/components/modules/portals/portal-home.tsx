@@ -218,7 +218,7 @@ export function PortalHome() {
       {/* Footer */}
       <footer className="mt-auto border-t bg-background">
         <div className="mx-auto w-full max-w-3xl px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-center text-xs text-muted-foreground sm:px-6">
-          © {year} {school?.name ?? 'SchoolDesk'} • SchoolDesk v0.1 • Phase 0 of 10
+          © {year} {school?.name ?? 'SchoolDesk'} • SchoolDesk v0.1 • Phase 1 of 10 — Academic Setup
         </div>
       </footer>
     </div>

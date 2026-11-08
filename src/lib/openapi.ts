@@ -42,6 +42,79 @@ const paths: Record<string, unknown> = {
   '/search': op('get', 'Global search across students and staff (?q=)', 'Search'),
   '/notifications': op('get', 'Latest notifications for the signed-in user', 'Notifications'),
   '/notifications/read': op('post', 'Mark notifications read ({ids[]} or {all:true})', 'Notifications', { requestBody: jsonBody() }),
+
+  '/employees': op('get', 'List active staff (lightweight picker used by academic modules; extended by HR phase)', 'HR'),
+
+  // ── Academic ────────────────────────────────────────────────────────────
+  '/academics/sessions': { get: op('get', 'List academic sessions with nested terms', 'Academic')['get'],
+    post: op('post', 'Create a session (optionally set as current)', 'Academic', { requestBody: jsonBody() })['post'] },
+  '/academics/sessions/{id}': {
+    patch: op('patch', 'Update a session (rename, dates, set current)', 'Academic', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete a session (blocked when exams exist under its terms)', 'Academic')['delete'],
+  },
+  '/academics/terms': { get: op('get', 'List terms (optionally by sessionId)', 'Academic')['get'],
+    post: op('post', 'Create a term in a session', 'Academic', { requestBody: jsonBody() })['post'] },
+  '/academics/terms/{id}': {
+    patch: op('patch', 'Update a term', 'Academic', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete a term (blocked when exams exist)', 'Academic')['delete'],
+  },
+  '/academics/terms/{id}/activate': op('post', 'Set a term (and its session) as the current one', 'Academic'),
+  '/academics/classes': { get: op('get', 'List classes with sections, form teachers and counts', 'Academic')['get'],
+    post: op('post', 'Create a class (name, level, category)', 'Academic', { requestBody: jsonBody() })['post'] },
+  '/academics/classes/{id}': {
+    patch: op('patch', 'Update a class', 'Academic', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete a class (blocked when active students or open applicants exist)', 'Academic')['delete'],
+  },
+  '/academics/sections': op('post', 'Create a section (arm) in a class with optional form teacher', 'Academic', { requestBody: jsonBody() }),
+  '/academics/sections/{id}': {
+    patch: op('patch', 'Update a section (name, capacity, form teacher)', 'Academic', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete a section (blocked when students are assigned)', 'Academic')['delete'],
+  },
+  '/academics/subjects': { get: op('get', 'List subjects', 'Academic')['get'],
+    post: op('post', 'Create a subject (name, code, core flag)', 'Academic', { requestBody: jsonBody() })['post'] },
+  '/academics/subjects/{id}': {
+    patch: op('patch', 'Update a subject', 'Academic', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete a subject (blocked when offered in classes)', 'Academic')['delete'],
+  },
+  '/academics/class-subjects': { get: op('get', 'List subject offerings per class (filter by classId/teacherId)', 'Academic')['get'],
+    post: op('post', 'Offer a subject in a class with optional teacher', 'Academic', { requestBody: jsonBody() })['post'] },
+  '/academics/class-subjects/{id}': {
+    patch: op('patch', 'Assign/clear the teacher for a class subject', 'Academic', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Remove a subject from a class (blocked when exam results exist)', 'Academic')['delete'],
+  },
+  '/academics/lesson-plans': { get: op('get', 'List lesson plans/syllabus (filter classSubjectId, termId, type)', 'Academic')['get'],
+    post: op('post', 'Create a lesson plan or syllabus entry', 'Academic', { requestBody: jsonBody() })['post'] },
+  '/academics/lesson-plans/{id}': {
+    patch: op('patch', 'Update a lesson plan', 'Academic', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete a lesson plan', 'Academic')['delete'],
+  },
+  '/academics/promotions': { get: op('get', 'Preview promotion plan for ?classId — suggested moves, graduates, warnings', 'Academic')['get'],
+    post: op('post', 'Run promotions ({entries:[{studentId, action, toClassId}]})', 'Academic', { requestBody: jsonBody() })['post'] },
+
+  // ── Admissions ──────────────────────────────────────────────────────────
+  '/admissions/applicants': { get: op('get', 'List applicants with pipeline stage counts (filter status, search)', 'Admissions')['get'],
+    post: op('post', 'Create an application (auto APP-YYYY-#### number)', 'Admissions', { requestBody: jsonBody() })['post'] },
+  '/admissions/applicants/{id}': {
+    get: op('get', 'Applicant detail with allowed pipeline transitions', 'Admissions')['get'],
+    patch: op('patch', 'Update applicant / move stage (interview, waitlist, reject)', 'Admissions', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete an application (blocked once converted)', 'Admissions')['delete'],
+  },
+  '/admissions/applicants/{id}/convert': op('post', 'Convert an applicant into an enrolled student (auto admission number)', 'Admissions', { requestBody: jsonBody() }),
+
+  // ── Students ────────────────────────────────────────────────────────────
+  '/students': { get: op('get', 'List students (classId, sectionId, status, gender, search, pagination)', 'Students')['get'],
+    post: op('post', 'Enrol a student (auto admission number PREFIX/YEAR/####)', 'Students', { requestBody: jsonBody() })['post'] },
+  '/students/{id}': {
+    get: op('get', 'Student profile: guardians, siblings (shared guardians), fees & attendance summary', 'Students')['get'],
+    patch: op('patch', 'Update bio, class/section, medical fields, status', 'Students', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete a student (blocked when invoices/results exist — use exit)', 'Students')['delete'],
+  },
+  '/students/{id}/guardians': { post: op('post', 'Link a guardian ({guardianId} or {new:{…}})', 'Students', { requestBody: jsonBody() })['post'],
+    delete: op('delete', 'Unlink a guardian (?guardianId=)', 'Students')['delete'] },
+  '/students/{id}/exit': op('post', 'Record transfer/graduation/suspension/withdrawal with exit metadata', 'Students', { requestBody: jsonBody() }),
+  '/students/import': op('post', 'Bulk CSV import ({rows:[…]}) with per-row report', 'Students', { requestBody: jsonBody() }),
+  '/students/export': op('get', 'Export filtered students as CSV (same filters as list)', 'Students'),
+  '/guardians': op('get', 'Search guardians (name/phone) for linking + sibling resolution', 'Students'),
 }
 
 export const openApiDoc = {
