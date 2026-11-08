@@ -113,6 +113,9 @@ export function InvoiceDetail({ invoiceId, onClose, onChanged, canWrite }: {
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg sm:rounded-l-2xl p-0">
         {isLoading || !invoice ? (
           <div className="space-y-3 p-6">
+            {/* Radix requires a title/description inside the dialog at all times */}
+            <SheetTitle className="sr-only">Invoice</SheetTitle>
+            <SheetDescription className="sr-only">Loading invoice details…</SheetDescription>
             <Skeleton className="h-8 w-40" />
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-40 w-full" />
