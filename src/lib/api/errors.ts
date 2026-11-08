@@ -14,4 +14,4 @@ export const badRequest = (msg = 'Bad request', details?: unknown) => new ApiErr
 export const unauthorized = (msg = 'Authentication required') => new ApiError(401, msg, 'UNAUTHORIZED')
 export const forbidden = (msg = 'You do not have permission to do this') => new ApiError(403, msg, 'FORBIDDEN')
 export const notFound = (msg = 'Not found') => new ApiError(404, msg, 'NOT_FOUND')
-export const conflict = (msg = 'Conflict') => new ApiError(409, msg, 'CONFLICT')
+export const conflict = (msg = 'Conflict', details?: unknown) => new ApiError(409, msg, 'CONFLICT', details)

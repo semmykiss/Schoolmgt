@@ -115,6 +115,29 @@ const paths: Record<string, unknown> = {
   '/students/import': op('post', 'Bulk CSV import ({rows:[…]}) with per-row report', 'Students', { requestBody: jsonBody() }),
   '/students/export': op('get', 'Export filtered students as CSV (same filters as list)', 'Students'),
   '/guardians': op('get', 'Search guardians (name/phone) for linking + sibling resolution', 'Students'),
+
+  // ── Timetable ───────────────────────────────────────────────────────────
+  '/timetable/periods': { get: op('get', 'List periods in daily order (with slot counts)', 'Timetable')['get'],
+    post: op('post', 'Create a period (name, HH:MM times, order, break flag)', 'Timetable', { requestBody: jsonBody() })['post'] },
+  '/timetable/periods/{id}': {
+    patch: op('patch', 'Update a period', 'Timetable', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete a period (blocked while timetable slots reference it)', 'Timetable')['delete'],
+  },
+  '/timetable/slots': { get: op('get', 'List slots (termId defaults to current; filters classId, sectionId, teacherId, day)', 'Timetable')['get'],
+    post: op('post', 'Schedule a lesson — 409 on class or teacher clash', 'Timetable', { requestBody: jsonBody() })['post'] },
+  '/timetable/slots/{id}': {
+    patch: op('patch', 'Move/edit a slot — clash-checked against the whole day', 'Timetable', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Clear a slot', 'Timetable')['delete'],
+  },
+  '/timetable/grid': op('get', 'Grid editor payload: term, periods, class slots, all term slots (clash prechecks), class subjects, staff list', 'Timetable'),
+  '/timetable/copy': op('post', 'Copy one class+section timetable onto another (target must be empty; missing subjects skipped, double-booked teachers cleared)', 'Timetable', { requestBody: jsonBody() }),
+
+  // ── Attendance ──────────────────────────────────────────────────────────
+  '/attendance': { get: op('get', 'Register: active students of a class for ?date (+optional sectionId/periodId) with saved marks', 'Attendance')['get'],
+    post: op('post', 'Save the whole register in one shot; whole-day absences notify portal-linked parents', 'Attendance', { requestBody: jsonBody() })['post'] },
+  '/attendance/summary': op('get', 'Monthly analytics: totals, per-student tallies and a per-day series (daily registers only)', 'Attendance'),
+  '/attendance/staff': { get: op('get', 'Staff register for ?date — active employees with saved marks', 'Attendance')['get'],
+    post: op('post', 'Save the whole staff register for the day', 'Attendance', { requestBody: jsonBody() })['post'] },
 }
 
 export const openApiDoc = {

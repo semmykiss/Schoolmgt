@@ -8,6 +8,8 @@ import { ApiDocsView } from '@/components/modules/admin/api-docs-view'
 import { AcademicSetupView } from '@/components/modules/academics/academic-setup-view'
 import { AdmissionsView } from '@/components/modules/admissions/admissions-view'
 import { StudentsView } from '@/components/modules/students/students-view'
+import { TimetableView } from '@/components/modules/timetable/timetable-view'
+import { AttendanceView } from '@/components/modules/attendance/attendance-view'
 import { ComingSoon } from '@/components/shared/coming-soon'
 
 /**
@@ -31,6 +33,10 @@ export function RouterView({ segments }: { segments: string[] }) {
       return <AdmissionsView />
     case 'students':
       return <StudentsView />
+    case 'timetable':
+      return <TimetableView />
+    case 'attendance':
+      return <AttendanceView />
     default:
       return <ComingSoon itemKey={MODULES[key] ? key : 'dashboard'} />
   }

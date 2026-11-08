@@ -85,4 +85,16 @@ export const qk = {
   applicants: (filters?: Record<string, unknown>) => ['admissions', 'applicants', filters ?? {}] as const,
   students: (filters?: Record<string, unknown>) => ['students', filters ?? {}] as const,
   student: (id?: string) => ['students', 'detail', id ?? 'none'] as const,
+  // timetable
+  periods: () => ['timetable', 'periods'] as const,
+  timetableGrid: (termId?: string, classId?: string, sectionId?: string) =>
+    ['timetable', 'grid', termId ?? 'current', classId ?? 'none', sectionId ?? 'all'] as const,
+  teacherTimetable: (termId?: string, teacherId?: string) =>
+    ['timetable', 'teacher', termId ?? 'current', teacherId ?? 'none'] as const,
+  // attendance
+  attendanceRegister: (classId?: string, sectionId?: string, date?: string, periodId?: string) =>
+    ['attendance', 'register', classId ?? 'none', sectionId ?? 'all', date ?? '', periodId ?? 'daily'] as const,
+  attendanceSummary: (classId?: string, sectionId?: string, from?: string, to?: string) =>
+    ['attendance', 'summary', classId ?? 'none', sectionId ?? 'all', from ?? '', to ?? ''] as const,
+  staffAttendance: (date?: string) => ['attendance', 'staff', date ?? ''] as const,
 }
