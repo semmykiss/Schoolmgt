@@ -499,12 +499,12 @@ async function main() {
     const ranked = Object.entries(perStudent)
       .map(([studentId, v]) => ({ studentId, average: v.total / v.count, total: v.total, count: v.count }))
       .sort((a, b) => b.average - a.average)
-    ranked.forEach((r, idx) => {
+    await Promise.all(ranked.map(async (r, idx) => {
       const g = gradeFor(r.average)
       const remark = r.average >= 70 ? 'An outstanding result. Keep it up!' :
         r.average >= 55 ? 'A good performance. Aim higher next term.' :
         r.average >= 45 ? 'Fair result. More effort is needed.' : 'Needs close monitoring and support.'
-      db.reportCard.create({ data: {
+      await db.reportCard.create({ data: {
         schoolId: school.id, examId: publishedExam.id, studentId: r.studentId,
         totalScore: Math.round(r.total), average: Math.round(r.average * 100) / 100,
         position: idx + 1, grade: g.grade,
@@ -512,7 +512,7 @@ async function main() {
         teacherRemark: remark, principalRemark: idx < 3 ? 'Commended performance.' : null,
         published: true,
       } }).catch(() => null)
-    })
+    }))
   }
   // current term mid-term exam (unpublished, no marks yet)
   const midTermExam = await db.exam.create({ data: {

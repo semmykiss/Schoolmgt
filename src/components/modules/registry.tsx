@@ -12,6 +12,7 @@ import { TimetableView } from '@/components/modules/timetable/timetable-view'
 import { AttendanceView } from '@/components/modules/attendance/attendance-view'
 import { FeesView } from '@/components/modules/fees/fees-view'
 import { AccountsView } from '@/components/modules/accounts/accounts-view'
+import { ExamsView } from '@/components/modules/exams/exams-view'
 import { ComingSoon } from '@/components/shared/coming-soon'
 
 /**
@@ -43,6 +44,8 @@ export function RouterView({ segments }: { segments: string[] }) {
       return <FeesView />
     case 'accounts':
       return <AccountsView />
+    case 'exams':
+      return <ExamsView />
     default:
       return <ComingSoon itemKey={MODULES[key] ? key : 'dashboard'} />
   }

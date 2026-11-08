@@ -173,6 +173,40 @@ const paths: Record<string, unknown> = {
     delete: op('delete', 'Delete a manual entry', 'Accounts')['delete'],
   },
   '/accounts/summary': op('get', 'Income vs expense analytics: monthly series, category breakdown, net position (?from&to)', 'Accounts'),
+
+  // ── Exams & report cards ────────────────────────────────────────────────
+  '/exams': { get: op('get', 'List exams (termId, examTypeId, search) with schedule/result counts + published summary', 'Exams')['get'],
+    post: op('post', 'Create an exam (one exam type per term)', 'Exams', { requestBody: jsonBody() })['post'] },
+  '/exams/{id}': {
+    get: op('get', 'Exam detail with full paper timetable (schedules + classes)', 'Exams')['get'],
+    patch: op('patch', 'Update exam name/type/dates', 'Exams', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete an exam (blocked while results are published)', 'Exams')['delete'],
+  },
+  '/exams/{id}/publish': op('post', 'Publish/unpublish results and/or class scores; flips every report card published flag', 'Exams', { requestBody: jsonBody() }),
+  '/exams/exam-types': { get: op('get', 'List exam types with exam counts', 'Exams')['get'],
+    post: op('post', 'Create an exam type (name + weight %)', 'Exams', { requestBody: jsonBody() })['post'] },
+  '/exams/exam-types/{id}': {
+    patch: op('patch', 'Update an exam type', 'Exams', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete an exam type (blocked while exams reference it)', 'Exams')['delete'],
+  },
+  '/exams/schedules': { get: op('get', 'List papers scheduled for ?examId', 'Exams')['get'],
+    post: op('post', 'Schedule a paper — 409 on duplicate subject or same-class time clash', 'Exams', { requestBody: jsonBody() })['post'] },
+  '/exams/schedules/{id}': {
+    patch: op('patch', 'Update paper date/time/max marks', 'Exams', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Remove a paper (blocked when scores are entered)', 'Exams')['delete'],
+  },
+  '/exams/{id}/marks-sheet': { get: op('get', 'Marks sheet ?classSubjectId= — roster + saved scores + default grading bands', 'Exams')['get'],
+    post: op('post', 'Bulk save scores with auto-grading from the default scale (blocked once published)', 'Exams', { requestBody: jsonBody() })['post'] },
+  '/exams/broadsheet': op('get', 'Broadsheet ?examId&classId — students × subjects matrix, totals, averages, positions, subject stats', 'Exams'),
+  '/exams/grading-scales': { get: op('get', 'List grading scales with bands (default first)', 'Exams')['get'],
+    post: op('post', 'Create a grading scale with nested bands', 'Exams', { requestBody: jsonBody() })['post'] },
+  '/exams/grading-scales/{id}': {
+    patch: op('patch', 'Update a scale (bands replaced wholesale)', 'Exams', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete a scale (default scale protected)', 'Exams')['delete'],
+  },
+  '/report-cards': { get: op('get', '?examId&classId list, or ?examId&studentId full printable payload (school header, subjects, remarks, grading key)', 'Exams')['get'],
+    post: op('post', 'Generate/refresh report cards for {examId, classId}: totals, averages, competition-ranked positions, auto remarks', 'Exams', { requestBody: jsonBody() })['post'] },
+  '/report-cards/{id}': op('patch', 'Update teacher/principal remarks or publish one report card', 'Exams', { requestBody: jsonBody() }),
 }
 
 export const openApiDoc = {

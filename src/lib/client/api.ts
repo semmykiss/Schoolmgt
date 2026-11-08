@@ -105,4 +105,18 @@ export const qk = {
   feesSummary: (termId?: string) => ['fees', 'summary', termId ?? 'all'] as const,
   ledger: (filters?: Record<string, unknown>) => ['accounts', 'ledger', filters ?? {}] as const,
   accountsSummary: (from?: string, to?: string) => ['accounts', 'summary', from ?? '', to ?? ''] as const,
+  // exams & report cards
+  examTypes: () => ['exams', 'exam-types'] as const,
+  exams: (filters?: Record<string, unknown>) => ['exams', 'list', filters ?? {}] as const,
+  exam: (id?: string) => ['exams', 'detail', id ?? 'none'] as const,
+  examSchedules: (examId?: string) => ['exams', 'schedules', examId ?? 'none'] as const,
+  marksSheet: (examId?: string, classSubjectId?: string) =>
+    ['exams', 'marks', examId ?? 'none', classSubjectId ?? 'none'] as const,
+  broadsheet: (examId?: string, classId?: string) =>
+    ['exams', 'broadsheet', examId ?? 'none', classId ?? 'none'] as const,
+  gradingScales: () => ['exams', 'grading-scales'] as const,
+  reportCards: (examId?: string, classId?: string) =>
+    ['exams', 'report-cards', examId ?? 'none', classId ?? 'none'] as const,
+  reportCard: (examId?: string, studentId?: string) =>
+    ['exams', 'report-card', examId ?? 'none', studentId ?? 'none'] as const,
 }
