@@ -138,6 +138,41 @@ const paths: Record<string, unknown> = {
   '/attendance/summary': op('get', 'Monthly analytics: totals, per-student tallies and a per-day series (daily registers only)', 'Attendance'),
   '/attendance/staff': { get: op('get', 'Staff register for ?date — active employees with saved marks', 'Attendance')['get'],
     post: op('post', 'Save the whole staff register for the day', 'Attendance', { requestBody: jsonBody() })['post'] },
+
+  // ── Fees ────────────────────────────────────────────────────────────────
+  '/fees/structures': { get: op('get', 'List fee structures (filters classId, termId, sessionId, search)', 'Fees')['get'],
+    post: op('post', 'Create a fee structure (JSON line items, total in kobo)', 'Fees', { requestBody: jsonBody() })['post'] },
+  '/fees/structures/{id}': {
+    patch: op('patch', 'Update a fee structure', 'Fees', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete (or deactivate when used by invoices) a fee structure', 'Fees')['delete'],
+  },
+  '/fees/invoices': { get: op('get', 'List invoices (status, termId, sessionId, classId, studentId, search) + status counts', 'Fees')['get'],
+    post: op('post', 'Raise an invoice (auto INV-YYYY-###### number, computed totals/status)', 'Fees', { requestBody: jsonBody() })['post'] },
+  '/fees/invoices/bulk': op('post', 'Bulk-generate invoices for a class/section from a fee structure (skips students already invoiced that term)', 'Fees', { requestBody: jsonBody() }),
+  '/fees/invoices/{id}': {
+    get: op('get', 'Invoice detail: student, guardians, payments, active discounts, live balance', 'Fees')['get'],
+    patch: op('patch', 'Edit items/discount/due date/notes (manual status override blocked while balance outstanding)', 'Fees', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Void an invoice (blocked when payments exist)', 'Fees')['delete'],
+  },
+  '/fees/invoices/{id}/payments': { get: op('get', 'List payments on an invoice', 'Payments')['get'],
+    post: op('post', 'Record a payment — atomic: receipt RCP-YYYY-######, invoice status update, instalment allocation, income ledger entry', 'Payments', { requestBody: jsonBody() })['post'] },
+  '/fees/invoices/{id}/payments/{paymentId}': op('delete', 'Reverse a payment (restores balance, removes ledger entry)', 'Payments'),
+  '/fees/discounts': { get: op('get', 'List discounts (filter studentId, active)', 'Fees')['get'],
+    post: op('post', 'Grant a discount (PERCENT 1-100 or FIXED kobo)', 'Fees', { requestBody: jsonBody() })['post'] },
+  '/fees/discounts/{id}': {
+    patch: op('patch', 'Update a discount (name, value, active)', 'Fees', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete a discount', 'Fees')['delete'],
+  },
+  '/fees/summary': op('get', 'Collections overview: billed/collected/outstanding, status counts, top defaulters, recent payments', 'Fees'),
+
+  // ── Accounts ────────────────────────────────────────────────────────────
+  '/accounts/ledger': { get: op('get', 'List ledger entries (type, category, date range) + income/expense/net totals', 'Accounts')['get'],
+    post: op('post', 'Add a manual income/expense entry', 'Accounts', { requestBody: jsonBody() })['post'] },
+  '/accounts/ledger/{id}': {
+    patch: op('patch', 'Edit a manual entry (system-generated entries are locked)', 'Accounts', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete a manual entry', 'Accounts')['delete'],
+  },
+  '/accounts/summary': op('get', 'Income vs expense analytics: monthly series, category breakdown, net position (?from&to)', 'Accounts'),
 }
 
 export const openApiDoc = {

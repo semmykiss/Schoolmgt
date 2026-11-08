@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { ChevronDown, GraduationCap, HelpCircle, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
-import { NAV_GROUPS, type NavItem } from '@/lib/nav'
+import { BUILT_PHASES, NAV_GROUPS, type NavItem } from '@/lib/nav'
 import { navigate, useHashRoute } from '@/hooks/use-hash-route'
 import { useSession } from '@/stores/session'
 import { cn } from '@/lib/utils'
@@ -127,7 +127,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onNavigate }: SidebarProp
                     {!collapsed && (
                       <>
                         <span className="truncate">{item.label}</span>
-                        {item.phase > 0 && (
+                        {item.phase > 0 && !BUILT_PHASES.has(item.phase) && (
                           <span className="ml-auto shrink-0 rounded border border-sidebar-border bg-muted/60 px-1 py-px text-[10px] font-medium leading-4 text-muted-foreground">
                             P{item.phase}
                           </span>
@@ -141,7 +141,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onNavigate }: SidebarProp
                     <TooltipTrigger asChild>{link}</TooltipTrigger>
                     <TooltipContent side="right" sideOffset={8}>
                       {item.label}
-                      {item.phase > 0 ? ` · Phase ${item.phase}` : ''}
+                      {item.phase > 0 && !BUILT_PHASES.has(item.phase) ? ` · Phase ${item.phase}` : ''}
                     </TooltipContent>
                   </Tooltip>
                 ) : (

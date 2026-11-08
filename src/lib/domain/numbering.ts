@@ -62,3 +62,23 @@ export const applicationNumber = {
     return rows.reduce((max, r) => Math.max(max, extractSeq(r.applicationNumber)), 0)
   },
 }
+
+export const invoiceNumber = {
+  currentMax: async (schoolId: string, year: number) => {
+    const rows = await db.feeInvoice.findMany({
+      where: { schoolId, invoiceNumber: { contains: `-${year}-` } },
+      select: { invoiceNumber: true },
+    })
+    return rows.reduce((max, r) => Math.max(max, extractSeq(r.invoiceNumber)), 0)
+  },
+}
+
+export const receiptNumber = {
+  currentMax: async (schoolId: string, year: number) => {
+    const rows = await db.payment.findMany({
+      where: { schoolId, receiptNumber: { contains: `-${year}-` } },
+      select: { receiptNumber: true },
+    })
+    return rows.reduce((max, r) => Math.max(max, extractSeq(r.receiptNumber)), 0)
+  },
+}

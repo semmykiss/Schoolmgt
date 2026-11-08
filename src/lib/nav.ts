@@ -88,6 +88,9 @@ export const MODULES: Record<string, NavItem> = Object.fromEntries(
   NAV_GROUPS.flatMap(g => g.items).map(i => [i.key, i]),
 )
 
+/** Phases delivered so far — nav phase badges only show for unbuilt modules. */
+export const BUILT_PHASES = new Set([0, 1, 2, 3, 4])
+
 /** What each phase delivers — powers the "coming soon" views. */
 export const PHASE_CONTENT: Record<number, { title: string; bullets: string[] }> = {
   1: { title: 'Academic Setup', bullets: ['Sessions & terms', 'Classes, sections & form teachers', 'Subjects & teacher assignment', 'Syllabus / lesson plans', 'Promotions'] },

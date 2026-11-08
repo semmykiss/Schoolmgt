@@ -97,4 +97,12 @@ export const qk = {
   attendanceSummary: (classId?: string, sectionId?: string, from?: string, to?: string) =>
     ['attendance', 'summary', classId ?? 'none', sectionId ?? 'all', from ?? '', to ?? ''] as const,
   staffAttendance: (date?: string) => ['attendance', 'staff', date ?? ''] as const,
+  // fees & accounts
+  feeStructures: (filters?: Record<string, unknown>) => ['fees', 'structures', filters ?? {}] as const,
+  invoices: (filters?: Record<string, unknown>) => ['fees', 'invoices', filters ?? {}] as const,
+  invoice: (id?: string) => ['fees', 'invoice', id ?? 'none'] as const,
+  discounts: (filters?: Record<string, unknown>) => ['fees', 'discounts', filters ?? {}] as const,
+  feesSummary: (termId?: string) => ['fees', 'summary', termId ?? 'all'] as const,
+  ledger: (filters?: Record<string, unknown>) => ['accounts', 'ledger', filters ?? {}] as const,
+  accountsSummary: (from?: string, to?: string) => ['accounts', 'summary', from ?? '', to ?? ''] as const,
 }

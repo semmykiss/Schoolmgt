@@ -60,7 +60,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 sm:px-6">{children}</main>
         <footer className="mt-auto border-t bg-background">
           <div className="px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-xs text-muted-foreground sm:px-6">
-            © {year} {school?.name ?? 'SchoolDesk'} • SchoolDesk v0.1 • Phase 1 of 10 — Academic Setup
+            © {year} {school?.name ?? 'SchoolDesk'} • SchoolDesk v0.4 • Phases 0–4 complete — Fees & Accounts live
           </div>
         </footer>
       </div>
