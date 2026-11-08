@@ -1,20 +1,19 @@
- ============================================================================
-  SchoolDesk — Prisma schema
-  ----------------------------------------------------------------------------
-  Conventions
-  - Multi-tenant: every tenant table carries `schoolId`. All API queries are
-    scoped by the authenticated user's schoolId (enforced in lib/api handlers).
-  - Money: stored as Int kobo (₦1.00 = 100). Currency configurable per school
-    (default NGN).
-  - Dates: pure calendar dates are ISO strings "YYYY-MM-DD" (SQLite-friendly,
-    timezone-safe). Timestamps use DateTime.
-  - Enums: SQLite has no native enums → string columns with documented allowed
-    values. When porting to PostgreSQL, swap `provider` and convert to enums.
-  - Soft references (createdById, recordedById, decidedById...) are plain
-    scalar ids (no FK graph) to keep the relation map lean; core domain
-    relations are declared for typed `include` queries.
-  ============================================================================
-*/
+// ============================================================================
+//  SchoolDesk — Prisma schema
+//  ----------------------------------------------------------------------------
+//  Conventions
+//  - Multi-tenant: every tenant table carries `schoolId`. All API queries are
+//    scoped by the authenticated user's schoolId (enforced in lib/api handlers).
+//  - Money: stored as Int kobo (₦1.00 = 100). Currency configurable per school
+//    (default NGN).
+//  - Dates: pure calendar dates are ISO strings "YYYY-MM-DD" (SQLite-friendly,
+//    timezone-safe). Timestamps use DateTime.
+//  - Enums: SQLite has no native enums → string columns with documented allowed
+//    values. When porting to PostgreSQL, swap `provider` and convert to enums.
+//  - Soft references (createdById, recordedById, decidedById...) are plain
+//    scalar ids (no FK graph) to keep the relation map lean; core domain
+//    relations are declared for typed `include` queries.
+//  ============================================================================
 
 generator client {
   provider = "prisma-client-js"
@@ -54,6 +53,7 @@ model School {
   roles    Role[]
   settings Setting[]
   students Student[]
+  employees Employee[]
 }
 
 model Branch {
@@ -91,10 +91,12 @@ model User {
   updatedAt    DateTime  @updatedAt
 
   school        School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  branch        Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
   refreshTokens RefreshToken[]
   notifications Notification[]
   guardianProfile Guardian?
   employeeProfile Employee?
+  studentProfile  Student?
 
   @@unique([schoolId, email])
   @@index([schoolId])
@@ -237,9 +239,6 @@ model Subject {
   updatedAt DateTime @updatedAt
 
   classSubjects ClassSubject[]
-  slots         TimetableSlot[]
-  examSchedules ExamSchedule[]
-  examResults   ExamResult[]
   assignments   Assignment[]
 
   @@unique([schoolId, name])
@@ -298,6 +297,7 @@ model Student {
   otherName       String?
   gender          String // MALE | FEMALE
   dateOfBirth     String?
+  userId          String? @unique // student portal login
   classId         String?
   sectionId       String?
   // ACTIVE | GRADUATED | TRANSFERRED | SUSPENDED | LEFT
@@ -314,6 +314,8 @@ model Student {
   updatedAt       DateTime @updatedAt
 
   school   School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  branch   Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  user     User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
   class    SchoolClass? @relation(fields: [classId], references: [id], onDelete: SetNull)
   section  Section?     @relation(fields: [sectionId], references: [id], onDelete: SetNull)
 
@@ -382,8 +384,6 @@ model Applicant {
   updatedAt         DateTime @updatedAt
 
   classApplied SchoolClass? @relation(fields: [classAppliedId], references: [id], onDelete: SetNull)
-
-  documents Document[]
 
   @@unique([schoolId, applicationNumber])
   @@index([schoolId, status])
@@ -629,7 +629,7 @@ model AssignmentSubmission {
   id           String  @id @default(cuid())
   assignmentId String
   studentId    String
-  submittedAt  DateTime @default(now)
+  submittedAt  DateTime @default(now())
   fileUrl      String?
   note         String?
   // SUBMITTED | LATE | GRADED
@@ -813,6 +813,7 @@ model Employee {
   updatedAt      DateTime @updatedAt
 
   school           School?           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  branch           Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
   user             User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
   salaryStructures SalaryStructure[]
   payslips         Payslip[]
