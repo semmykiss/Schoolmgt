@@ -70,6 +70,10 @@ export const qk = {
   session: ['session'] as const,
   dashboard: ['dashboard'] as const,
   notifications: ['notifications'] as const,
+  portal: ['portal'] as const,
+  child: (studentId: string) => ['portal', 'child', studentId] as const,
+  assignments: (filters?: Record<string, unknown>) => ['assignments', filters ?? {}] as const,
+  assignmentSubmissions: (id: string) => ['assignments', id, 'submissions'] as const,
   users: (filters?: Record<string, unknown>) => ['users', filters ?? {}] as const,
   roles: ['roles'] as const,
   // academics

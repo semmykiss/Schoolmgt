@@ -362,6 +362,8 @@ async function main() {
       dateOfBirth: `${seat.dobYear}-${pad(between(1, 12), 2)}-${pad(between(1, 28), 2)}`,
       classId: classes[clsKey], sectionId: sections[seat.secKey],
       status: 'ACTIVE', admissionDate: `${seat.admitYear}-09-09`,
+      // i===0 is Chinedu Okafor — link the demo student portal login
+      userId: i === 0 ? studentUser.id : null,
       address: `${between(2, 120)} ${pick(['Awolowo', 'Allen', 'Obafemi', 'Sobo', 'Aromire'])} Way, Ikeja, Lagos`,
       bloodGroup: pick(['O+', 'A+', 'B+', 'O-', 'AB+']),
       medicalNotes: rng() < 0.12 ? pick(['Mild asthma — carries inhaler', 'Allergic to peanuts', 'Wears glasses (short-sighted)']) : null,
@@ -678,6 +680,17 @@ async function main() {
     description: 'Read "The Value of Honest Work" (page 54) and write a 250-word essay on honesty.',
     dueDate: iso(addDays(new Date(), 5)),
   } })
+
+  // sample submissions — Chinedu (demo student login) already turned in the Maths sheet
+  const chineduStudent = await db.student.findFirst({ where: { schoolId: school.id, userId: studentUser.id } })
+  const mthAssignment = await db.assignment.findFirst({ where: { schoolId: school.id, title: 'Problem Solving Worksheet 4' } })
+  if (chineduStudent && mthAssignment) {
+    await db.assignmentSubmission.create({ data: {
+      assignmentId: mthAssignment.id, studentId: chineduStudent.id,
+      status: 'SUBMITTED', submittedAt: new Date(),
+      note: 'Questions 1–20 completed in my exercise book.',
+    } })
+  }
 
   // ── inventory & library ─────────────────────────────────────────────────
   console.log('📦 Creating inventory & library…')

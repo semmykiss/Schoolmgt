@@ -207,6 +207,25 @@ const paths: Record<string, unknown> = {
   '/report-cards': { get: op('get', '?examId&classId list, or ?examId&studentId full printable payload (school header, subjects, remarks, grading key)', 'Exams')['get'],
     post: op('post', 'Generate/refresh report cards for {examId, classId}: totals, averages, competition-ranked positions, auto remarks', 'Exams', { requestBody: jsonBody() })['post'] },
   '/report-cards/{id}': op('patch', 'Update teacher/principal remarks or publish one report card', 'Exams', { requestBody: jsonBody() }),
+
+  // ── Homework / assignments ─────────────────────────────────────────────
+  '/assignments': { get: op('get', 'List homework (classId, subjectId, search; teachers see their own posts) with class size + submission counts', 'Assignments')['get'],
+    post: op('post', 'Post homework {classId, subjectId, title, description?, dueDate} — notifies portal-linked students & parents', 'Assignments', { requestBody: jsonBody() })['post'] },
+  '/assignments/{id}': {
+    get: op('get', 'Get one homework post', 'Assignments')['get'],
+    patch: op('patch', 'Update homework (teachers limited to their own posts)', 'Assignments', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete homework and its submissions (teachers limited to their own posts)', 'Assignments')['delete'],
+  },
+  '/assignments/{id}/submissions': {
+    get: op('get', 'Submission roster — every active student in the class joined with their submission state', 'Assignments')['get'],
+    post: op('post', 'Student/parent turn-in {studentId?, note?} — idempotent upsert; LATE derived from due date (blocked once graded)', 'Assignments', { requestBody: jsonBody() })['post'],
+    patch: op('patch', 'Grade a submission {studentId, score} → status GRADED + parent/student notification', 'Assignments', { requestBody: jsonBody() })['patch'],
+  },
+  '/assignments/portal': op('get', 'Role-aware homework list — students see their class + own submission, parents per child, teachers their posts with progress', 'Assignments'),
+
+  // ── Parent & student portals ───────────────────────────────────────────
+  '/portal/overview': op('get', 'Role-aware portal dashboard (PARENT/STUDENT): per-child attendance %, latest published results, fees due, homework roll-up, today\'s timetable, announcements', 'Portal'),
+  '/portal/child/{studentId}': op('get', 'Guardian-verified drill-in: portal summary + invoices, payments, recent attendance marks, published report cards', 'Portal'),
 }
 
 export const openApiDoc = {

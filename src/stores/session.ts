@@ -3,6 +3,7 @@
 import { create } from 'zustand'
 import { api } from '@/lib/client/api'
 import { can as canPerm } from '@/lib/auth/permissions-client'
+import { queryClient } from '@/app/providers'
 
 export interface SessionUser {
   id: string; email: string; fullName: string; role: string
@@ -50,6 +51,7 @@ export const useSession = create<SessionState>((set, get) => ({
     const data = await api<{ user: SessionUser; school: SessionSchool; branches: SessionBranch[] }>('/auth/login', {
       method: 'POST', body: { email, password },
     })
+    queryClient.clear() // drop any data cached under a previous account
     set({ status: 'authed', user: data.user, school: data.school, branches: data.branches })
   },
 
@@ -57,11 +59,13 @@ export const useSession = create<SessionState>((set, get) => ({
     const data = await api<{ user: SessionUser; school: SessionSchool; branches: SessionBranch[] }>('/auth/register', {
       method: 'POST', body: input,
     })
+    queryClient.clear()
     set({ status: 'authed', user: data.user, school: data.school, branches: data.branches })
   },
 
   logout: async () => {
     try { await api('/auth/logout', { method: 'POST' }) } catch { /* ignore */ }
+    queryClient.clear() // never leak the signed-in user's data to the next login
     set({ status: 'anonymous', user: null, school: null, branches: [] })
   },
 
