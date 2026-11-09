@@ -161,9 +161,15 @@ export async function studentPortalSummary(
   schoolId: string,
   student: StudentWithClass,
   term: { id: string; name: string; startDate: string; endDate: string; session: { name: string } } | null,
+  viewerRole: string, // 'PARENT' | 'STUDENT' — drives announcement visibility
 ): Promise<StudentPortalSummary> {
   const today = isoToday()
   const since = term?.startDate ?? isoDaysFromToday(-120)
+
+  // Role-aware announcement visibility: a PARENTS-only broadcast must never
+  // surface in the student portal and vice-versa. CLASS-scoped items reach the
+  // student's own class (and, at send time, their guardians).
+  const portalAudience = viewerRole === 'PARENT' ? 'PARENTS' : 'STUDENTS'
 
   const attendanceWhere = {
     schoolId,
@@ -218,8 +224,7 @@ export async function studentPortalSummary(
         publishedAt: { not: null },
         OR: [
           { audience: 'ALL' },
-          { audience: 'PARENTS' },
-          { audience: 'STUDENTS' },
+          { audience: portalAudience },
           { audience: 'CLASS', classId: student.classId ?? '___' },
         ],
       },

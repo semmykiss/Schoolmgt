@@ -19,7 +19,7 @@ export const GET = createHandler({ permission: 'portal', roles: ['PARENT', 'STUD
     )
   }
   const term = await currentTerm(user.schoolId)
-  const children = await Promise.all(students.map(s => studentPortalSummary(user.schoolId, s, term)))
+  const children = await Promise.all(students.map(s => studentPortalSummary(user.schoolId, s, term, user.role)))
 
   const unread = await db.notification.count({ where: { userId: user.id, read: false } })
 

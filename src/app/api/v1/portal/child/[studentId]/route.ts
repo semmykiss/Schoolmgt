@@ -31,7 +31,7 @@ export const GET = createHandler({ permission: 'portal', roles: ['PARENT', 'STUD
   const today = isoToday()
 
   const [summary, invoices, payments, recentAttendance, reportCards] = await Promise.all([
-    studentPortalSummary(user.schoolId, student, term),
+    studentPortalSummary(user.schoolId, student, term, user.role),
     db.feeInvoice.findMany({
       where: { schoolId: user.schoolId, studentId, status: { not: 'VOID' } },
       orderBy: { dueDate: 'desc' },
