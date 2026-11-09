@@ -142,4 +142,16 @@ export const qk = {
   suppliers: (filters?: Record<string, unknown>) => ['inventory', 'suppliers', filters ?? {}] as const,
   books: (filters?: Record<string, unknown>) => ['library', 'books', filters ?? {}] as const,
   loans: (filters?: Record<string, unknown>) => ['library', 'loans', filters ?? {}] as const,
+  // reports & admin (Phase 10)
+  reportEnrollment: ['reports', 'enrollment'] as const,
+  reportAcademic: (examId?: string) => ['reports', 'academic', examId ?? 'latest'] as const,
+  reportFinancial: (termId?: string, from?: string, to?: string) =>
+    ['reports', 'financial', termId ?? 'all', from ?? '', to ?? ''] as const,
+  reportAttendance: (from?: string, to?: string, classId?: string) =>
+    ['reports', 'attendance', from ?? '', to ?? '', classId ?? 'all'] as const,
+  savedFilters: (module?: string) => ['reports', 'saved-filters', module ?? 'all'] as const,
+  scheduledExports: ['reports', 'scheduled-exports'] as const,
+  auditLogs: (filters?: Record<string, unknown>) => ['audit', 'logs', filters ?? {}] as const,
+  settings: ['settings'] as const,
+  backups: ['admin', 'backups'] as const,
 }

@@ -56,3 +56,6 @@ skills/
 agent-ctx/
 tool-results/
 *.log
+
+# phase 10 — db snapshots
+backups/

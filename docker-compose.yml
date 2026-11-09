@@ -1,0 +1,38 @@
+# ============================================================================
+# SchoolDesk — multi-tenant school management SaaS (Next.js standalone build)
+#
+#   docker compose up --build -d     → http://localhost:3000
+#
+# First boot: the entrypoint creates the SQLite schema in the ./db volume and
+# seeds the Nigerian demo school (SEED_DEMO_DATA=1). Set SEED_DEMO_DATA=0 to
+# start with an empty database.
+# ============================================================================
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: schooldesk:latest
+    container_name: schooldesk-app
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      # SQLite inside the persisted volume
+      DATABASE_URL: "file:/app/db/custom.db"
+      # Override in a .env file next to this compose file — do not ship the
+      # default secret beyond local demos
+      SD_JWT_ACCESS_SECRET: ${SD_JWT_ACCESS_SECRET:-change-me-in-production}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-1}
+    volumes:
+      - ./db:/app/db          # SQLite database (persists across rebuilds)
+      - ./backups:/app/backups  # drop manual backup copies here
+    restart: unless-stopped
+    healthcheck:
+      # lightweight liveness probe served by the app (src/app/api/health)
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s

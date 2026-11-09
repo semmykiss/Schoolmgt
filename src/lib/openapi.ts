@@ -309,6 +309,34 @@ const paths: Record<string, unknown> = {
   '/library/loans': { get: op('get', 'Issuing register (status, bookId, search) — lazily flags overdue loans', 'Library')['get'],
     post: op('post', 'Issue a book to a student or staff member {bookId, borrowerType, borrowerId, dueDate}', 'Library', { requestBody: jsonBody() })['post'] },
   '/library/loans/{id}/return': op('patch', 'Receive a book back — fine auto-computes (₦50/day, capped) unless overridden', 'Library', { requestBody: jsonBody() }),
+
+  // ── Reports & analytics (Phase 10) ──────────────────────────────────────
+  '/reports/enrollment': op('get', 'Enrollment analytics: totals, by-class split with gender, status mix, 12-month admissions trend, staff by department/type', 'Reports'),
+  '/reports/academic': op('get', 'Exam performance (?examId, defaults latest): class & subject averages, grade distribution, top 10 students', 'Reports'),
+  '/reports/financial': op('get', 'Fee collection analytics (?termId&from&to): expected/collected/outstanding by class & status, monthly payments, expense categories, defaulters', 'Reports'),
+  '/reports/attendance': op('get', 'Attendance analytics (?from&to&classId): daily trend, by-class rates, status mix, staff attendance, chronic absentees', 'Reports'),
+  '/reports/saved-filters': { get: op('get', 'List the signed-in user\'s saved report views (?module=)', 'Reports')['get'],
+    post: op('post', 'Save a report view {module, name, criteria}', 'Reports', { requestBody: jsonBody() })['post'] },
+  '/reports/saved-filters/{id}': {
+    patch: op('patch', 'Rename or update a saved view (owner only)', 'Reports', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete a saved view (owner only)', 'Reports')['delete'],
+  },
+  '/reports/scheduled-exports': { get: op('get', 'List scheduled exports for the school', 'Reports')['get'],
+    post: op('post', 'Schedule an export {reportKey, name, frequency, format, recipients[], filters, active}', 'Reports', { requestBody: jsonBody() })['post'] },
+  '/reports/scheduled-exports/{id}': {
+    patch: op('patch', 'Update a schedule (name, frequency, recipients, active…)', 'Reports', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete a schedule', 'Reports')['delete'],
+  },
+  '/reports/scheduled-exports/{id}/run': op('post', 'Run a schedule now — rebuilds the CSV, stamps lastRunAt and notifies recipients with SchoolDesk accounts', 'Reports'),
+
+  // ── Audit & administration (Phase 10) ───────────────────────────────────
+  '/audit-logs': op('get', 'Audit trail (action, entity, q, from/to, page/pageSize) — permission audit.read', 'Reports'),
+  '/admin/backup': { get: op('get', 'List SQLite database snapshots', 'Settings')['get'],
+    post: op('post', 'Create a database snapshot into /backups', 'Settings')['post'] },
+  '/admin/backup/{name}': {
+    get: op('get', 'Download a snapshot file', 'Settings')['get'],
+    delete: op('delete', 'Delete a snapshot file', 'Settings')['delete'],
+  },
 }
 
 export const openApiDoc = {

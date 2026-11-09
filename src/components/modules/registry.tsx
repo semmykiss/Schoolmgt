@@ -21,6 +21,9 @@ import { StaffView } from '@/components/modules/staff/staff-view'
 import { StaffSelfServiceView } from '@/components/modules/staff/staff-self-service'
 import { InventoryView } from '@/components/modules/inventory/inventory-view'
 import { LibraryView } from '@/components/modules/library/library-view'
+import { ReportsView } from '@/components/modules/reports/reports-view'
+import { AuditView } from '@/components/modules/admin/audit-view'
+import { SettingsView } from '@/components/modules/admin/settings-view'
 import { ComingSoon } from '@/components/shared/coming-soon'
 
 /**
@@ -70,6 +73,12 @@ export function RouterView({ segments }: { segments: string[] }) {
       return <InventoryView />
     case 'library':
       return <LibraryView />
+    case 'reports':
+      return <ReportsView />
+    case 'audit':
+      return <AuditView />
+    case 'settings':
+      return <SettingsView />
     default:
       return <ComingSoon itemKey={MODULES[key] ? key : 'dashboard'} />
   }

@@ -1,0 +1,42 @@
+# ============================================================================
+# SchoolDesk — Docker build context
+# Everything the multi-stage Dockerfile needs: package.json, prisma/, src/,
+# public/, config files. Databases, backups and env files come via volumes /
+# runtime env — never baked into the image.
+# ============================================================================
+
+# Dependencies — installed fresh inside the image
+node_modules
+
+# Next.js build output — rebuilt inside the image
+.next
+
+# Version control
+.git
+.gitignore
+
+# Local SQLite databases — provided via the ./db volume instead
+db/*.db
+db/*.db-journal
+db/*.db-wal
+db/*.db-shm
+
+# Backups — provided via the ./backups volume instead
+backups
+
+# Environment files — secrets must not enter the image
+.env
+.env.*
+
+# Logs (dev.log / server.log from the tee'd npm scripts)
+*.log
+
+# Repo docs, dev scripts and fixtures not needed at runtime
+docs
+scripts
+tests
+examples
+upload
+download
+Caddyfile
+bun.lock

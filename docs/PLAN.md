@@ -16,7 +16,7 @@ Nigerian demo context, currency NGN, fully responsive, light/dark themes.
 | Paystack/Flutterwave | Adapter interface with **sandbox/mock driver** + real driver code paths (keys from Settings) + webhook endpoint | Online payment flow fully testable without live keys. |
 | PDF exports | **Print-optimised views** (report card, receipt, ID card, timetable) via browser print → PDF; CSV export server/client side | Zero heavy server PDF deps; school-branded output. |
 | Unit tests + Playwright | Domain logic isolated as **pure functions in `src/lib/domain/*`** (fees, grading, attendance, positions, clash detection) — unit-test ready. Verification in this sandbox: `lint` + live browser run-through of the golden path per module | Sandbox does not run test suites; logic is still isolated for tests to attach later. |
-| Docker Compose + README | Delivered in final phase | — |
+| Docker Compose + README | **Dockerfile (multi-stage standalone) + docker-compose.yml + .dockerignore + README.md delivered** | Single port 3000; SQLite persisted via `./db` volume; healthcheck on `/api/health`. |
 
 ## 1. Folder structure
 
@@ -209,7 +209,7 @@ GET  /openapi.json                      OpenAPI 3.1 document (rendered by SPA "A
 | 7 | Communication | announcements, events, templates, messaging adapters, notification centre | ✅ |
 | 8 | HR & payroll | employees, salary structures, payslips (full breakdown), leaves (self-service), staff portal access | ✅ |
 | 9 | Inventory & library | items, stock movements (restock alerts), suppliers, books, loans (auto fines) | ✅ |
-| 10 | Reports + admin + polish | analytics, saved filters, scheduled exports, roles matrix (✅ done in phase 9 wave), audit log UI, branding, backups, i18n stubs, README, docker-compose | ⏳ |
+| 10 | Reports + admin + polish | analytics, saved filters, scheduled exports, roles matrix (✅ done in phase 9 wave), audit log UI, branding, backups, i18n stubs, README, docker-compose | ✅ |
 
 ## 4. Seed data (Nigerian context, configurable via env)
 
