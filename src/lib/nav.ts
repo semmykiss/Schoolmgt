@@ -89,7 +89,7 @@ export const MODULES: Record<string, NavItem> = Object.fromEntries(
 )
 
 /** Phases delivered so far — nav phase badges only show for unbuilt modules. */
-export const BUILT_PHASES = new Set([0, 1, 2, 3, 4, 5, 6])
+export const BUILT_PHASES = new Set([0, 1, 2, 3, 4, 5, 6, 7])
 
 /** What each phase delivers — powers the "coming soon" views. */
 export const PHASE_CONTENT: Record<number, { title: string; bullets: string[] }> = {

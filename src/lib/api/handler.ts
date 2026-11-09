@@ -68,8 +68,8 @@ export function createHandler<B = undefined>(opts: HandlerOpts<B>, fn: (ctx: Han
       if (opts.auth !== false) {
         user = await getAuthUser(req)
         if (!user) throw new ApiError(401, 'Please sign in to continue')
-        if (opts.roles && !opts.roles.includes(user.role)) throw new ApiError(403, 'Your role cannot access this resource')
-        if (opts.permission && !can(user.permissions, opts.permission)) throw new ApiError(403, `Missing permission: ${opts.permission}`)
+        if (opts.roles && !opts.roles.includes(user.role)) throw new ApiError(403, 'Your role cannot access this resource', 'FORBIDDEN')
+        if (opts.permission && !can(user.permissions, opts.permission)) throw new ApiError(403, `Missing permission: ${opts.permission}`, 'FORBIDDEN')
       }
 
       let body = undefined as B

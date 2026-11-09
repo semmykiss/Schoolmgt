@@ -226,6 +226,33 @@ const paths: Record<string, unknown> = {
   // ── Parent & student portals ───────────────────────────────────────────
   '/portal/overview': op('get', 'Role-aware portal dashboard (PARENT/STUDENT): per-child attendance %, latest published results, fees due, homework roll-up, today\'s timetable, announcements', 'Portal'),
   '/portal/child/{studentId}': op('get', 'Guardian-verified drill-in: portal summary + invoices, payments, recent attendance marks, published report cards', 'Portal'),
+
+  // ── Communication (announcements, events, messaging) ───────────────────
+  '/communication/announcements': { get: op('get', 'List announcements (status=published|draft, audience, search) — pinned first', 'Communication')['get'],
+    post: op('post', 'Draft an announcement {title, body, audience, classId?, pinned?}', 'Communication', { requestBody: jsonBody() })['post'] },
+  '/communication/announcements/{id}': {
+    get: op('get', 'Get one announcement', 'Communication')['get'],
+    patch: op('patch', 'Update announcement {published: true|false} publishes/unpublishes in place', 'Communication', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete an announcement everywhere', 'Communication')['delete'],
+  },
+  '/communication/announcements/{id}/publish': op('post', 'Publish a draft — fans out in-app notifications to the targeted audience (idempotent)', 'Communication'),
+  '/communication/events': { get: op('get', 'List calendar events (?from&to range, ?type, ?upcoming=1)', 'Communication')['get'],
+    post: op('post', 'Schedule a calendar event {title, type, startDate, endDate, audience, classId?}', 'Communication', { requestBody: jsonBody() })['post'] },
+  '/communication/events/{id}': {
+    get: op('get', 'Get one event', 'Communication')['get'],
+    patch: op('patch', 'Update an event', 'Communication', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Remove an event from the calendar', 'Communication')['delete'],
+  },
+  '/communication/templates': { get: op('get', 'List reusable message templates (channel, search)', 'Communication')['get'],
+    post: op('post', 'Create a template {name, channel, subject?, body} — placeholders {{school}}, {{name}}, {{student}}, {{date}}', 'Communication', { requestBody: jsonBody() })['post'] },
+  '/communication/templates/{id}': {
+    get: op('get', 'Get one template', 'Communication')['get'],
+    patch: op('patch', 'Update a template (name unique per school)', 'Communication', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete a template (already-sent logs unaffected)', 'Communication')['delete'],
+  },
+  '/communication/send': op('post', 'Broadcast {channel, templateId?, subject?, body?, audience} — resolves contacts, renders placeholders, sends via configured driver, logs every message', 'Communication', { requestBody: jsonBody() }),
+  '/communication/send/preview': op('post', 'Recipient estimate for a broadcast spec — count + 5 samples without sending', 'Communication', { requestBody: jsonBody() }),
+  '/communication/logs': op('get', 'Delivery log (channel, status, search) + status counts', 'Communication'),
 }
 
 export const openApiDoc = {

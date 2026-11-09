@@ -14,6 +14,9 @@ import { FeesView } from '@/components/modules/fees/fees-view'
 import { AccountsView } from '@/components/modules/accounts/accounts-view'
 import { ExamsView } from '@/components/modules/exams/exams-view'
 import { HomeworkView } from '@/components/modules/homework/homework-view'
+import { AnnouncementsView } from '@/components/modules/communication/announcements-view'
+import { CalendarView } from '@/components/modules/communication/calendar-view'
+import { MessagesView } from '@/components/modules/communication/messages-view'
 import { ComingSoon } from '@/components/shared/coming-soon'
 
 /**
@@ -49,6 +52,12 @@ export function RouterView({ segments }: { segments: string[] }) {
       return <ExamsView />
     case 'homework':
       return <HomeworkView />
+    case 'announcements':
+      return <AnnouncementsView />
+    case 'calendar':
+      return <CalendarView />
+    case 'messages':
+      return <MessagesView />
     default:
       return <ComingSoon itemKey={MODULES[key] ? key : 'dashboard'} />
   }

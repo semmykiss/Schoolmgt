@@ -123,4 +123,9 @@ export const qk = {
     ['exams', 'report-cards', examId ?? 'none', classId ?? 'none'] as const,
   reportCard: (examId?: string, studentId?: string) =>
     ['exams', 'report-card', examId ?? 'none', studentId ?? 'none'] as const,
+  // communication
+  announcements: (filters?: Record<string, unknown>) => ['communication', 'announcements', filters ?? {}] as const,
+  events: (filters?: Record<string, unknown>) => ['communication', 'events', filters ?? {}] as const,
+  templates: (filters?: Record<string, unknown>) => ['communication', 'templates', filters ?? {}] as const,
+  commLogs: (filters?: Record<string, unknown>) => ['communication', 'logs', filters ?? {}] as const,
 }
