@@ -1,0 +1,712 @@
+     1→'use client'
+     2→
+     3→import { useMemo, useState } from 'react'
+     4→import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+     5→import { useForm } from 'react-hook-form'
+     6→import { zodResolver } from '@hookform/resolvers/zod'
+     7→import { z } from 'zod'
+     8→import { toast } from 'sonner'
+     9→import { CalendarRange, ClipboardList, Clock, Eye, FileSignature, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
+    10→import type { ColumnDef } from '@tanstack/react-table'
+    11→import { api, qk } from '@/lib/client/api'
+    12→import { useSession } from '@/stores/session'
+    13→import { fmtDate } from '@/components/modules/academics/academic-helpers'
+    14→import { DataTable } from '@/components/shared/data-table'
+    15→import { EmptyState } from '@/components/shared/empty-state'
+    16→import { StatCard } from '@/components/shared/stat-card'
+    17→import { ConfirmDialog } from '@/components/shared/confirm-dialog'
+    18→import { Button } from '@/components/ui/button'
+    19→import { Input } from '@/components/ui/input'
+    20→import { Label } from '@/components/ui/label'
+    21→import { Badge } from '@/components/ui/badge'
+    22→import { Switch } from '@/components/ui/switch'
+    23→import {
+    24→  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+    25→} from '@/components/ui/dialog'
+    26→import {
+    27→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    28→} from '@/components/ui/select'
+    29→import { TERM_LABEL } from '@/components/modules/academics/academic-helpers'
+    30→import { FieldError } from '@/components/shared/field-error'
+    31→import { cn } from '@/lib/utils'
+    32→
+    33→interface ExamRow {
+    34→  id: string
+    35→  name: string
+    36→  startDate: string | null
+    37→  endDate: string | null
+    38→  publishResults: boolean
+    39→  publishClassScores: boolean
+    40→  term: { id: string; name: string; sessionId: string; session: { name: string; isCurrent: boolean } }
+    41→  examType: { id: string; name: string; weight: number }
+    42→  _count: { schedules: number; results: number; reportCards: number }
+    43→}
+    44→interface SessionRow { id: string; name: string; isCurrent: boolean; terms: { id: string; name: string; startDate: string; endDate: string; isCurrent: boolean }[] }
+    45→interface ExamTypeRow { id: string; name: string; weight: number; _count: { exams: number } }
+    46→
+    47→const formSchema = z.object({
+    48→  name: z.string().min(3, 'Give the exam a name (min 3 characters)').max(140),
+    49→  termId: z.string().min(1, 'Select the term'),
+    50→  examTypeId: z.string().min(1, 'Select the exam type'),
+    51→  startDate: z.string().optional(),
+    52→  endDate: z.string().optional(),
+    53→}).refine(v => !v.startDate || !v.endDate || v.startDate <= v.endDate, {
+    54→  message: 'End date cannot be before the start date',
+    55→  path: ['endDate'],
+    56→})
+    57→type FormValues = z.infer<typeof formSchema>
+    58→
+    59→export function ExamsTab({ canWrite, onGoMarks }: { canWrite: boolean; onGoMarks: () => void }) {
+    60→  const qc = useQueryClient()
+    61→  const canMark = useSession(s => s.can('exams.marks'))
+    62→  const [dialogOpen, setDialogOpen] = useState(false)
+    63→  const [editTarget, setEditTarget] = useState<ExamRow | null>(null)
+    64→  const [deleteTarget, setDeleteTarget] = useState<ExamRow | null>(null)
+    65→  const [papersTarget, setPapersTarget] = useState<ExamRow | null>(null)
+    66→
+    67→  const { data, isLoading } = useQuery({
+    68→    queryKey: qk.exams(),
+    69→    queryFn: () => api<{ items: ExamRow[]; total: number; published: number }>('/exams', { query: { pageSize: 100 } }),
+    70→  })
+    71→  const exams = useMemo(() => data?.items ?? [], [data])
+    72→
+    73→  const { data: typesData } = useQuery({
+    74→    queryKey: qk.examTypes(),
+    75→    queryFn: () => api<{ items: ExamTypeRow[] }>('/exams/exam-types'),
+    76→  })
+    77→  const { data: sessionsData } = useQuery({
+    78→    queryKey: qk.sessions(),
+    79→    queryFn: () => api<{ items: SessionRow[] }>('/academics/sessions'),
+    80→  })
+    81→  const terms = useMemo(
+    82→    () => (sessionsData?.items ?? []).flatMap(s => s.terms.map(t => ({ ...t, sessionName: s.name }))),
+    83→    [sessionsData],
+    84→  )
+    85→
+    86→  const totals = useMemo(() => ({
+    87→    papers: exams.reduce((n, e) => n + e._count.schedules, 0),
+    88→    scores: exams.reduce((n, e) => n + e._count.results, 0),
+    89→  }), [exams])
+    90→
+    91→  const invalidate = () => qc.invalidateQueries({ queryKey: ['exams'] })
+    92→
+    93→  const publish = useMutation({
+    94→    mutationFn: ({ id, publishResults, publishClassScores }: { id: string; publishResults?: boolean; publishClassScores?: boolean }) =>
+    95→      api<ExamRow>(`/exams/${id}/publish`, { method: 'POST', body: { publishResults, publishClassScores } }),
+    96→    onSuccess: updated => {
+    97→      invalidate()
+    98→      toast.success(updated.publishResults
+    99→        ? `Results published — ${updated.name} is now live on the portals`
+   100→        : 'Exam visibility updated')
+   101→    },
+   102→    onError: e => toast.error(e instanceof Error ? e.message : 'Publish failed'),
+   103→  })
+   104→
+   105→  const remove = useMutation({
+   106→    mutationFn: (id: string) => api(`/exams/${id}`, { method: 'DELETE' }),
+   107→    onSuccess: () => { invalidate(); setDeleteTarget(null); toast.success('Exam deleted') },
+   108→    onError: e => toast.error(e instanceof Error ? e.message : 'Delete failed'),
+   109→  })
+   110→
+   111→  const columns: ColumnDef<ExamRow>[] = [
+   112→    {
+   113→      accessorKey: 'name',
+   114→      header: 'Exam',
+   115→      cell: ({ row }) => (
+   116→        <div className="min-w-0">
+   117→          <p className="truncate font-medium">{row.original.name}</p>
+   118→          <p className="text-xs text-muted-foreground">
+   119→            {row.original.examType.name} · {row.original.examType.weight}% weight
+   120→          </p>
+   121→        </div>
+   122→      ),
+   123→    },
+   124→    {
+   125→      id: 'term',
+   126→      header: 'Term',
+   127→      cell: ({ row }) => (
+   128→        <div className="text-sm">
+   129→          <p>{TERM_LABEL[row.original.term.name] ?? row.original.term.name}</p>
+   130→          <p className="text-xs text-muted-foreground">{row.original.term.session.name}</p>
+   131→        </div>
+   132→      ),
+   133→    },
+   134→    {
+   135→      id: 'period',
+   136→      header: 'Period',
+   137→      cell: ({ row }) => (
+   138→        <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+   139→          <CalendarRange className="h-3.5 w-3.5" aria-hidden />
+   140→          {row.original.startDate ? `${fmtDate(row.original.startDate)}${row.original.endDate ? ` – ${fmtDate(row.original.endDate)}` : ''}` : 'Not set'}
+   141→        </span>
+   142→      ),
+   143→    },
+   144→    {
+   145→      id: 'papers',
+   146→      header: 'Papers',
+   147→      cell: ({ row }) => <Badge variant="outline" className="tabular-nums">{row.original._count.schedules}</Badge>,
+   148→    },
+   149→    {
+   150→      id: 'scores',
+   151→      header: 'Scores',
+   152→      cell: ({ row }) => <Badge variant="outline" className="tabular-nums">{row.original._count.results}</Badge>,
+   153→    },
+   154→    {
+   155→      id: 'publish',
+   156→      header: 'Published',
+   157→      cell: ({ row }) => canWrite ? (
+   158→        <div className="flex flex-col gap-1.5" aria-label={`Publish controls for ${row.original.name}`}>
+   159→          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+   160→            <Switch
+   161→              checked={row.original.publishResults}
+   162→              onCheckedChange={v => publish.mutate({ id: row.original.id, publishResults: v })}
+   163→              disabled={publish.isPending}
+   164→              aria-label={`Publish results for ${row.original.name}`}
+   165→            />
+   166→            Results
+   167→          </label>
+   168→          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+   169→            <Switch
+   170→              checked={row.original.publishClassScores}
+   171→              onCheckedChange={v => publish.mutate({ id: row.original.id, publishClassScores: v })}
+   172→              disabled={publish.isPending}
+   173→              aria-label={`Publish class scores for ${row.original.name}`}
+   174→            />
+   175→            Scores
+   176→          </label>
+   177→        </div>
+   178→      ) : row.original.publishResults ? (
+   179→        <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">Published</Badge>
+   180→      ) : (
+   181→        <Badge variant="outline">Draft</Badge>
+   182→      ),
+   183→    },
+   184→    {
+   185→      id: 'actions',
+   186→      header: '',
+   187→      cell: ({ row }) => (
+   188→        <div className="flex justify-end gap-1">
+   189→          <Button
+   190→            variant="ghost" size="icon"
+   191→            aria-label={`Manage papers for ${row.original.name}`}
+   192→            title={row.original._count.schedules === 0 ? 'No papers yet — build the exam timetable' : 'Exam timetable (papers)'}
+   193→            onClick={() => setPapersTarget(row.original)}
+   194→          >
+   195→            <CalendarRange
+   196→              className={cn('h-4 w-4', row.original._count.schedules === 0 ? 'text-amber-500' : 'text-muted-foreground')}
+   197→              aria-hidden
+   198→            />
+   199→          </Button>
+   200→          {canMark && (
+   201→            <Button variant="ghost" size="icon" aria-label={`Enter marks for ${row.original.name}`} onClick={onGoMarks} title="Go to Marks Entry">
+   202→              <FileSignature className="h-4 w-4 text-muted-foreground" aria-hidden />
+   203→            </Button>
+   204→          )}
+   205→          {canWrite && (
+   206→            <>
+   207→              <Button variant="ghost" size="icon" aria-label={`Edit ${row.original.name}`} onClick={() => { setEditTarget(row.original); setDialogOpen(true) }}>
+   208→                <Pencil className="h-4 w-4 text-muted-foreground" aria-hidden />
+   209→              </Button>
+   210→              <Button
+   211→                variant="ghost" size="icon"
+   212→                aria-label={`Delete ${row.original.name}`}
+   213→                onClick={() => setDeleteTarget(row.original)}
+   214→                disabled={row.original.publishResults}
+   215→              >
+   216→                <Trash2 className="h-4 w-4 text-muted-foreground" aria-hidden />
+   217→              </Button>
+   218→            </>
+   219→          )}
+   220→        </div>
+   221→      ),
+   222→    },
+   223→  ]
+   224→
+   225→  return (
+   226→    <div className="space-y-4">
+   227→      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+   228→        <StatCard label="Exams" value={data?.total ?? 0} icon={ClipboardList} loading={!data} />
+   229→        <StatCard label="Published" value={data?.published ?? 0} icon={Eye} tone="success" loading={!data} />
+   230→        <StatCard label="Papers scheduled" value={totals.papers} icon={CalendarRange} loading={!data} />
+   231→        <StatCard label="Scores recorded" value={totals.scores} icon={FileSignature} tone="primary" loading={!data} />
+   232→      </div>
+   233→
+   234→      <div className="rounded-xl border bg-card">
+   235→        <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
+   236→          <div>
+   237→            <h2 className="text-sm font-semibold">All exams</h2>
+   238→            <p className="text-xs text-muted-foreground">Create exams per term, publish results to the portals</p>
+   239→          </div>
+   240→          {canWrite && (
+   241→            <Button size="sm" onClick={() => { setEditTarget(null); setDialogOpen(true) }}>
+   242→              <Plus aria-hidden /> New exam
+   243→            </Button>
+   244→          )}
+   245→        </div>
+   246→
+   247→        {isLoading ? (
+   248→          <div className="flex h-48 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden /></div>
+   249→        ) : exams.length === 0 ? (
+   250→          <EmptyState
+   251→            icon={ClipboardList}
+   252→            title="No exams yet"
+   253→            description={canWrite ? 'Create your first exam — e.g. "First Term Mid-Term Test".' : 'No exams have been created yet.'}
+   254→          />
+   255→        ) : (
+   256→          <DataTable
+   257→            columns={columns}
+   258→            data={exams}
+   259→            rowId={e => e.id}
+   260→            searchPlaceholder="Search exams…"
+   261→            searchExtractor={e => `${e.name} ${e.examType.name} ${e.term.name} ${e.term.session.name}`}
+   262→          />
+   263→        )}
+   264→      </div>
+   265→
+   266→      <ExamDialog
+   267→        open={dialogOpen}
+   268→        onOpenChange={setDialogOpen}
+   269→        editTarget={editTarget}
+   270→        examTypes={typesData?.items ?? []}
+   271→        terms={terms}
+   272→        onDone={invalidate}
+   273→      />
+   274→
+   275→      <ConfirmDialog
+   276→        open={!!deleteTarget}
+   277→        onOpenChange={o => { if (!o) setDeleteTarget(null) }}
+   278→        title={`Delete "${deleteTarget?.name}"?`}
+   279→        description="Its exam timetable, scores and report cards are removed with it. This cannot be undone."
+   280→        confirmLabel="Delete exam"
+   281→        destructive
+   282→        onConfirm={async () => { if (deleteTarget) await remove.mutateAsync(deleteTarget.id) }}
+   283→      />
+   284→
+   285→      <PapersDialog
+   286→        exam={papersTarget}
+   287→        open={!!papersTarget}
+   288→        onOpenChange={o => { if (!o) setPapersTarget(null) }}
+   289→        canWrite={canWrite}
+   290→        onChanged={invalidate}
+   291→      />
+   292→    </div>
+   293→  )
+   294→}
+   295→
+   296→// ── Create / edit dialog ────────────────────────────────────────────────────
+   297→function ExamDialog({ open, onOpenChange, editTarget, examTypes, terms, onDone }: {
+   298→  open: boolean
+   299→  onOpenChange: (o: boolean) => void
+   300→  editTarget: ExamRow | null
+   301→  examTypes: ExamTypeRow[]
+   302→  terms: (SessionRow['terms'][number] & { sessionName: string })[]
+   303→  onDone: () => void
+   304→}) {
+   305→  const qc = useQueryClient()
+   306→  const form = useForm<FormValues>({
+   307→    resolver: zodResolver(formSchema),
+   308→    defaultValues: { name: '', termId: '', examTypeId: '', startDate: '', endDate: '' },
+   309→  })
+   310→
+   311→  // Re-seed on open
+   312→  const [seededKey, setSeededKey] = useState('')
+   313→  const seedKey = `${open}:${editTarget?.id ?? 'new'}`
+   314→  if (open && seededKey !== seedKey) {
+   315→    setSeededKey(seedKey)
+   316→    form.reset(editTarget ? {
+   317→      name: editTarget.name,
+   318→      termId: editTarget.term.id,
+   319→      examTypeId: editTarget.examType.id,
+   320→      startDate: editTarget.startDate ?? '',
+   321→      endDate: editTarget.endDate ?? '',
+   322→    } : { name: '', termId: '', examTypeId: '', startDate: '', endDate: '' })
+   323→  }
+   324→
+   325→  const save = useMutation({
+   326→    mutationFn: (v: FormValues) => {
+   327→      const body = {
+   328→        name: v.name,
+   329→        termId: v.termId,
+   330→        examTypeId: v.examTypeId,
+   331→        startDate: v.startDate || '',
+   332→        endDate: v.endDate || '',
+   333→      }
+   334→      return editTarget
+   335→        ? api(`/exams/${editTarget.id}`, { method: 'PATCH', body })
+   336→        : api('/exams', { method: 'POST', body })
+   337→    },
+   338→    onSuccess: exam => {
+   339→      qc.invalidateQueries({ queryKey: ['exams'] })
+   340→      onDone()
+   341→      onOpenChange(false)
+   342→      toast.success(editTarget ? 'Exam updated' : `Exam created — ${(exam as ExamRow).name}`)
+   343→    },
+   344→    onError: e => toast.error(e instanceof Error ? e.message : 'Save failed'),
+   345→  })
+   346→
+   347→  const errs = form.formState.errors
+   348→
+   349→  return (
+   350→    <Dialog open={open} onOpenChange={o => { onOpenChange(o); if (!o) form.reset() }}>
+   351→      <DialogContent className="sm:max-w-md">
+   352→        <DialogHeader>
+   353→          <DialogTitle>{editTarget ? 'Edit exam' : 'New exam'}</DialogTitle>
+   354→          <DialogDescription>
+   355→            {editTarget ? 'Update the exam details.' : 'One exam of each type per term — e.g. a Mid-Term Test and a Final Exam.'}
+   356→          </DialogDescription>
+   357→        </DialogHeader>
+   358→        <form className="space-y-4" onSubmit={form.handleSubmit(v => save.mutate(v))} noValidate>
+   359→          <div className="space-y-1.5">
+   360→            <Label htmlFor="exam-name">Name</Label>
+   361→            <Input id="exam-name" placeholder="First Term Examination — 2024/2025" {...form.register('name')} aria-invalid={!!errs.name} />
+   362→            <FieldError message={errs.name?.message} />
+   363→          </div>
+   364→          <div className="grid gap-3 sm:grid-cols-2">
+   365→            <div className="space-y-1.5">
+   366→              <Label>Term</Label>
+   367→              <Select value={form.watch('termId')} onValueChange={v => form.setValue('termId', v, { shouldValidate: true })}>
+   368→                <SelectTrigger aria-label="Select term" aria-invalid={!!errs.termId}><SelectValue placeholder="Select term" /></SelectTrigger>
+   369→                <SelectContent>
+   370→                  {terms.map(t => (
+   371→                    <SelectItem key={t.id} value={t.id}>
+   372→                      {TERM_LABEL[t.name] ?? t.name} — {t.sessionName}{t.isCurrent ? ' (current)' : ''}
+   373→                    </SelectItem>
+   374→                  ))}
+   375→                </SelectContent>
+   376→              </Select>
+   377→              <FieldError message={errs.termId?.message} />
+   378→            </div>
+   379→            <div className="space-y-1.5">
+   380→              <Label>Type</Label>
+   381→              <Select value={form.watch('examTypeId')} onValueChange={v => form.setValue('examTypeId', v, { shouldValidate: true })}>
+   382→                <SelectTrigger aria-label="Select exam type" aria-invalid={!!errs.examTypeId}><SelectValue placeholder="Select type" /></SelectTrigger>
+   383→                <SelectContent>
+   384→                  {examTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.name} ({t.weight}%)</SelectItem>)}
+   385→                </SelectContent>
+   386→              </Select>
+   387→              <FieldError message={errs.examTypeId?.message} />
+   388→            </div>
+   389→          </div>
+   390→          <div className="grid gap-3 sm:grid-cols-2">
+   391→            <div className="space-y-1.5">
+   392→              <Label htmlFor="exam-start">Starts (optional)</Label>
+   393→              <Input id="exam-start" type="date" {...form.register('startDate')} />
+   394→            </div>
+   395→            <div className="space-y-1.5">
+   396→              <Label htmlFor="exam-end">Ends (optional)</Label>
+   397→              <Input id="exam-end" type="date" {...form.register('endDate')} />
+   398→              <FieldError message={errs.endDate?.message} />
+   399→            </div>
+   400→          </div>
+   401→          <DialogFooter>
+   402→            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+   403→            <Button type="submit" disabled={save.isPending}>
+   404→              {save.isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+   405→              {editTarget ? 'Save changes' : 'Create exam'}
+   406→            </Button>
+   407→          </DialogFooter>
+   408→        </form>
+   409→      </DialogContent>
+   410→    </Dialog>
+   411→  )
+   412→}
+   413→
+   414→// ── Exam timetable (papers) dialog ──────────────────────────────────────────
+   415→interface ScheduleRow {
+   416→  id: string
+   417→  date: string
+   418→  startTime: string
+   419→  endTime: string
+   420→  maxMarks: number
+   421→  passMarks: number
+   422→  classSubject: {
+   423→    id: string
+   424→    subject: { name: string; code: string | null }
+   425→    class: { id: string; name: string }
+   426→    teacher: { id: string; firstName: string; lastName: string } | null
+   427→  }
+   428→}
+   429→interface ClassOption { id: string; name: string; level: number }
+   430→interface ClassSubjectOption {
+   431→  id: string
+   432→  subject: { name: string; code: string | null }
+   433→  teacher: { fullName: string } | null
+   434→}
+   435→
+   436→function PapersDialog({ exam, open, onOpenChange, canWrite, onChanged }: {
+   437→  exam: ExamRow | null
+   438→  open: boolean
+   439→  onOpenChange: (o: boolean) => void
+   440→  canWrite: boolean
+   441→  onChanged: () => void
+   442→}) {
+   443→  const qc = useQueryClient()
+   444→  const examId = exam?.id ?? ''
+   445→  const [formOpen, setFormOpen] = useState(false)
+   446→  const [editTarget, setEditTarget] = useState<ScheduleRow | null>(null)
+   447→  const [deleteTarget, setDeleteTarget] = useState<ScheduleRow | null>(null)
+   448→  const [classId, setClassId] = useState('NONE')
+   449→  const [classSubjectId, setClassSubjectId] = useState('NONE')
+   450→  const [date, setDate] = useState('')
+   451→  const [startTime, setStartTime] = useState('09:00')
+   452→  const [endTime, setEndTime] = useState('11:00')
+   453→  const [maxMarks, setMaxMarks] = useState('100')
+   454→  const [passMarks, setPassMarks] = useState('40')
+   455→  const [formError, setFormError] = useState('')
+   456→
+   457→  const { data, isLoading } = useQuery({
+   458→    queryKey: qk.examSchedules(open && examId ? examId : undefined),
+   459→    queryFn: () => api<{ items: ScheduleRow[] }>('/exams/schedules', { query: { examId } }),
+   460→    enabled: open && !!examId,
+   461→  })
+   462→  const schedules = data?.items ?? []
+   463→
+   464→  const { data: classesData } = useQuery({
+   465→    queryKey: qk.classes(),
+   466→    queryFn: () => api<{ items: ClassOption[] }>('/academics/classes'),
+   467→    enabled: open,
+   468→  })
+   469→  const classes = useMemo(() => (classesData?.items ?? []).slice().sort((a, b) => a.level - b.level), [classesData])
+   470→
+   471→  const { data: csData, isLoading: csLoading } = useQuery({
+   472→    queryKey: qk.classSubjects(classId === 'NONE' ? undefined : classId),
+   473→    queryFn: () => api<{ items: ClassSubjectOption[] }>('/academics/class-subjects', { query: { classId } }),
+   474→    enabled: open && formOpen && classId !== 'NONE',
+   475→  })
+   476→  const classSubjects = csData?.items ?? []
+   477→
+   478→  const closeForm = () => { setFormOpen(false); setEditTarget(null); setFormError('') }
+   479→
+   480→  const openAdd = () => {
+   481→    setEditTarget(null)
+   482→    setClassId('NONE')
+   483→    setClassSubjectId('NONE')
+   484→    setDate(exam?.startDate ?? '')
+   485→    setStartTime('09:00')
+   486→    setEndTime('11:00')
+   487→    setMaxMarks('100')
+   488→    setPassMarks('40')
+   489→    setFormError('')
+   490→    setFormOpen(true)
+   491→  }
+   492→
+   493→  const openEdit = (s: ScheduleRow) => {
+   494→    setEditTarget(s)
+   495→    setClassId(s.classSubject.class.id)
+   496→    setClassSubjectId(s.classSubject.id)
+   497→    setDate(s.date)
+   498→    setStartTime(s.startTime)
+   499→    setEndTime(s.endTime)
+   500→    setMaxMarks(String(s.maxMarks))
+   501→    setPassMarks(String(s.passMarks))
+   502→    setFormError('')
+   503→    setFormOpen(true)
+   504→  }
+   505→
+   506→  const validate = (): string => {
+   507→    if (classId === 'NONE' || classSubjectId === 'NONE') return 'Select the class and subject for this paper'
+   508→    if (!date) return 'Pick the exam date'
+   509→    if (!startTime || !endTime) return 'Set both the start and end time'
+   510→    if (startTime >= endTime) return 'End time must be after the start time'
+   511→    const max = Number(maxMarks)
+   512→    const pass = Number(passMarks)
+   513→    if (!Number.isFinite(max) || max < 1 || max > 1000) return 'Max marks must be between 1 and 1000'
+   514→    if (!Number.isFinite(pass) || pass < 0 || pass > max) return 'Pass marks must be between 0 and the max marks'
+   515→    return ''
+   516→  }
+   517→
+   518→  const save = useMutation({
+   519→    mutationFn: () => {
+   520→      const body = {
+   521→        ...(editTarget ? {} : { examId }),
+   522→        classSubjectId,
+   523→        date,
+   524→        startTime,
+   525→        endTime,
+   526→        maxMarks: Number(maxMarks),
+   527→        passMarks: Number(passMarks),
+   528→      }
+   529→      return editTarget
+   530→        ? api(`/exams/schedules/${editTarget.id}`, { method: 'PATCH', body })
+   531→        : api('/exams/schedules', { method: 'POST', body })
+   532→    },
+   533→    onSuccess: () => {
+   534→      void qc.invalidateQueries({ queryKey: ['exams'] })
+   535→      onChanged()
+   536→      closeForm()
+   537→      toast.success(editTarget ? 'Paper updated' : 'Paper scheduled')
+   538→    },
+   539→    onError: e => setFormError(e instanceof Error ? e.message : 'Save failed'),
+   540→  })
+   541→
+   542→  const remove = useMutation({
+   543→    mutationFn: (id: string) => api(`/exams/schedules/${id}`, { method: 'DELETE' }),
+   544→    onSuccess: () => {
+   545→      void qc.invalidateQueries({ queryKey: ['exams'] })
+   546→      onChanged()
+   547→      setDeleteTarget(null)
+   548→      toast.success('Paper removed from the timetable')
+   549→    },
+   550→    onError: e => { setDeleteTarget(null); toast.error(e instanceof Error ? e.message : 'Delete failed') },
+   551→  })
+   552→
+   553→  const grouped = useMemo(() => {
+   554→    const m = new Map<string, ScheduleRow[]>()
+   555→    for (const s of schedules) {
+   556→      const list = m.get(s.date) ?? []
+   557→      list.push(s)
+   558→      m.set(s.date, list)
+   559→    }
+   560→    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+   561→  }, [schedules])
+   562→
+   563→  const classSubject = classSubjects.find(cs => cs.id === classSubjectId)
+   564→
+   565→  return (
+   566→    <>
+   567→      <Dialog open={open} onOpenChange={o => { onOpenChange(o); if (!o) closeForm() }}>
+   568→        <DialogContent className="sm:max-w-2xl">
+   569→          <DialogHeader>
+   570→            <DialogTitle>Exam timetable — {exam?.name ?? ''}</DialogTitle>
+   571→            <DialogDescription>
+   572→              Schedule one paper per class subject with its date, time and marks. Marks entry needs at least one paper.
+   573→            </DialogDescription>
+   574→          </DialogHeader>
+   575→
+   576→          <div className="max-h-80 space-y-3 overflow-y-auto pr-1 [scrollbar-width:thin]" aria-label="Exam papers">
+   577→            {isLoading ? (
+   578→              <div className="flex h-24 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden /></div>
+   579→            ) : grouped.length === 0 ? (
+   580→              <p className="rounded-lg border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
+   581→                No papers yet. Add the first paper to unlock marks entry for this exam.
+   582→              </p>
+   583→            ) : (
+   584→              grouped.map(([day, rows]) => (
+   585→                <div key={day} className="space-y-1.5">
+   586→                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{fmtDate(day)}</p>
+   587→                  <ul className="space-y-1.5" role="list" aria-label={`Papers on ${day}`}>
+   588→                    {rows.map(s => (
+   589→                      <li key={s.id} className="flex flex-col gap-1.5 rounded-lg border px-3 py-2 sm:flex-row sm:items-center sm:gap-3">
+   590→                        <div className="min-w-0 flex-1">
+   591→                          <p className="truncate text-sm font-medium">
+   592→                            {s.classSubject.class.name} — {s.classSubject.subject.name}
+   593→                            {s.classSubject.subject.code ? ` (${s.classSubject.subject.code})` : ''}
+   594→                          </p>
+   595→                          <p className="flex items-center gap-1 text-xs text-muted-foreground">
+   596→                            <Clock className="h-3 w-3" aria-hidden />
+   597→                            {s.startTime}–{s.endTime} · Max {s.maxMarks} · Pass {s.passMarks}
+   598→                            {s.classSubject.teacher ? ` · ${s.classSubject.teacher.firstName} ${s.classSubject.teacher.lastName}` : ''}
+   599→                          </p>
+   600→                        </div>
+   601→                        {canWrite && (
+   602→                          <div className="flex gap-1">
+   603→                            <Button variant="ghost" size="icon" aria-label={`Edit ${s.classSubject.subject.name} paper`} onClick={() => openEdit(s)}>
+   604→                              <Pencil className="h-4 w-4 text-muted-foreground" aria-hidden />
+   605→                            </Button>
+   606→                            <Button variant="ghost" size="icon" aria-label={`Remove ${s.classSubject.subject.name} paper`} onClick={() => setDeleteTarget(s)}>
+   607→                              <Trash2 className="h-4 w-4 text-muted-foreground" aria-hidden />
+   608→                            </Button>
+   609→                          </div>
+   610→                        )}
+   611→                      </li>
+   612→                    ))}
+   613→                  </ul>
+   614→                </div>
+   615→              ))
+   616→            )}
+   617→          </div>
+   618→
+   619→          {formOpen ? (
+   620→            <form
+   621→              className="space-y-3 rounded-xl border bg-muted/30 p-3"
+   622→              onSubmit={e => { e.preventDefault(); const err = validate(); if (err) { setFormError(err); return } setFormError(''); save.mutate() }}
+   623→              noValidate
+   624→            >
+   625→              <p className="text-sm font-semibold">{editTarget ? `Edit ${editTarget.classSubject.subject.name} paper` : 'Add a paper'}</p>
+   626→              <div className="grid gap-3 sm:grid-cols-2">
+   627→                <div className="space-y-1.5">
+   628→                  <Label>Class</Label>
+   629→                  <Select value={classId} onValueChange={v => { setClassId(v); setClassSubjectId('NONE') }}>
+   630→                    <SelectTrigger aria-label="Select class for the paper"><SelectValue placeholder="Pick a class" /></SelectTrigger>
+   631→                    <SelectContent>
+   632→                      {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+   633→                    </SelectContent>
+   634→                  </Select>
+   635→                </div>
+   636→                <div className="space-y-1.5">
+   637→                  <Label>Subject</Label>
+   638→                  <Select value={classSubjectId} onValueChange={setClassSubjectId}>
+   639→                    <SelectTrigger aria-label="Select subject for the paper"><SelectValue placeholder={classId === 'NONE' ? 'Pick a class first' : 'Pick a subject'} /></SelectTrigger>
+   640→                    <SelectContent>
+   641→                      {csLoading ? (
+   642→                        <SelectItem value="LOADING" disabled>Loading…</SelectItem>
+   643→                      ) : classSubjects.length === 0 ? (
+   644→                        <SelectItem value="NONE" disabled>No subjects assigned to this class</SelectItem>
+   645→                      ) : (
+   646→                        classSubjects.map(cs => (
+   647→                          <SelectItem key={cs.id} value={cs.id}>
+   648→                            {cs.subject.name}{cs.subject.code ? ` (${cs.subject.code})` : ''}
+   649→                          </SelectItem>
+   650→                        ))
+   651→                      )}
+   652→                    </SelectContent>
+   653→                  </Select>
+   654→                  {classSubject?.teacher && <p className="text-xs text-muted-foreground">Teacher: {classSubject.teacher.fullName}</p>}
+   655→                </div>
+   656→              </div>
+   657→              <div className="grid gap-3 sm:grid-cols-3">
+   658→                <div className="space-y-1.5">
+   659→                  <Label htmlFor="paper-date">Date</Label>
+   660→                  <Input id="paper-date" type="date" value={date} onChange={e => setDate(e.target.value)} />
+   661→                </div>
+   662→                <div className="space-y-1.5">
+   663→                  <Label htmlFor="paper-start">Starts</Label>
+   664→                  <Input id="paper-start" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
+   665→                </div>
+   666→                <div className="space-y-1.5">
+   667→                  <Label htmlFor="paper-end">Ends</Label>
+   668→                  <Input id="paper-end" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
+   669→                </div>
+   670→              </div>
+   671→              <div className="grid gap-3 sm:grid-cols-2">
+   672→                <div className="space-y-1.5">
+   673→                  <Label htmlFor="paper-max">Max marks</Label>
+   674→                  <Input id="paper-max" type="number" min={1} max={1000} value={maxMarks} onChange={e => setMaxMarks(e.target.value)} />
+   675→                </div>
+   676→                <div className="space-y-1.5">
+   677→                  <Label htmlFor="paper-pass">Pass marks</Label>
+   678→                  <Input id="paper-pass" type="number" min={0} max={1000} value={passMarks} onChange={e => setPassMarks(e.target.value)} />
+   679→                </div>
+   680→              </div>
+   681→              {formError && <FieldError message={formError} />}
+   682→              <div className="flex justify-end gap-2">
+   683→                <Button type="button" variant="outline" size="sm" onClick={closeForm}>Cancel</Button>
+   684→                <Button type="submit" size="sm" disabled={save.isPending}>
+   685→                  {save.isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+   686→                  {editTarget ? 'Save paper' : 'Schedule paper'}
+   687→                </Button>
+   688→              </div>
+   689→            </form>
+   690→          ) : (
+   691→            canWrite && (
+   692→              <Button onClick={openAdd} className="w-full sm:w-auto">
+   693→                <Plus aria-hidden /> Add paper
+   694→              </Button>
+   695→            )
+   696→          )}
+   697→        </DialogContent>
+   698→      </Dialog>
+   699→
+   700→      <ConfirmDialog
+   701→        open={!!deleteTarget}
+   702→        onOpenChange={o => { if (!o) setDeleteTarget(null) }}
+   703→        title={`Remove ${deleteTarget?.classSubject.subject.name ?? ''} paper?`}
+   704→        description="Papers with scores already entered cannot be removed — clear those scores first."
+   705→        confirmLabel="Remove paper"
+   706→        destructive
+   707→        onConfirm={async () => { if (deleteTarget) await remove.mutateAsync(deleteTarget.id) }}
+   708→      />
+   709→    </>
+   710→  )
+   711→}
+   712→
