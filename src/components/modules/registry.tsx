@@ -17,6 +17,7 @@ import { HomeworkView } from '@/components/modules/homework/homework-view'
 import { AnnouncementsView } from '@/components/modules/communication/announcements-view'
 import { CalendarView } from '@/components/modules/communication/calendar-view'
 import { MessagesView } from '@/components/modules/communication/messages-view'
+import { StaffView } from '@/components/modules/staff/staff-view'
 import { ComingSoon } from '@/components/shared/coming-soon'
 
 /**
@@ -58,6 +59,8 @@ export function RouterView({ segments }: { segments: string[] }) {
       return <CalendarView />
     case 'messages':
       return <MessagesView />
+    case 'staff':
+      return <StaffView />
     default:
       return <ComingSoon itemKey={MODULES[key] ? key : 'dashboard'} />
   }

@@ -85,6 +85,13 @@ export const qk = {
   lessonPlans: (filters?: Record<string, unknown>) => ['academic', 'lesson-plans', filters ?? {}] as const,
   promotionPreview: (classId?: string) => ['academic', 'promotions', classId ?? 'none'] as const,
   employees: (search?: string) => ['employees', search ?? ''] as const,
+  // HR & payroll (Phase 8)
+  hrEmployees: (filters?: Record<string, unknown>) => ['hr', 'employees', filters ?? {}] as const,
+  hrEmployee: (id?: string) => ['hr', 'employee', id ?? 'none'] as const,
+  salaryStructures: (employeeId?: string) => ['hr', 'salary-structures', employeeId ?? 'all'] as const,
+  payslips: (filters?: Record<string, unknown>) => ['hr', 'payslips', filters ?? {}] as const,
+  payslip: (id?: string) => ['hr', 'payslip', id ?? 'none'] as const,
+  leaveRequests: (filters?: Record<string, unknown>) => ['hr', 'leave-requests', filters ?? {}] as const,
   // admissions + students
   applicants: (filters?: Record<string, unknown>) => ['admissions', 'applicants', filters ?? {}] as const,
   students: (filters?: Record<string, unknown>) => ['students', filters ?? {}] as const,

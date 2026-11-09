@@ -45,6 +45,35 @@ const paths: Record<string, unknown> = {
 
   '/employees': op('get', 'List active staff (lightweight picker used by academic modules; extended by HR phase)', 'HR'),
 
+  // ── HR & payroll (Phase 8) ────────────────────────────────────────────────
+  '/hr/employees': {
+    get: { summary: 'Staff directory (search, department, status, portal=linked|unlinked) with active salary gross', tags: ['HR'], responses: okResp() },
+    post: { summary: 'Onboard a staff member (staff code auto-assigned STF-####)', tags: ['HR'], requestBody: jsonBody(), responses: okResp() },
+  },
+  '/hr/employees/{id}': {
+    get: { summary: 'Staff profile: linked login, salary structures (gross/net), recent payslips and leave requests', tags: ['HR'], responses: okResp() },
+    patch: { summary: 'Update profile/employment fields', tags: ['HR'], requestBody: jsonBody(), responses: okResp() },
+    delete: { summary: 'Archive staff (soft-delete → status LEFT; history preserved)', tags: ['HR'], responses: okResp() },
+  },
+  '/hr/employees/{id}/portal-access': op('post', 'CREATE_LOGIN (role + email, temp password if omitted) or RESET_PASSWORD for the staff login', 'HR', { requestBody: jsonBody() }),
+  '/hr/salary-structures': {
+    get: { summary: 'List salary structures (?employeeId=) with computed gross/net', tags: ['HR'], responses: okResp() },
+    post: { summary: 'Attach a pay scale to an employee (activating deactivates the previous one)', tags: ['HR'], requestBody: jsonBody(), responses: okResp() },
+  },
+  '/hr/salary-structures/{id}': {
+    patch: { summary: 'Edit or activate/deactivate a salary structure', tags: ['HR'], requestBody: jsonBody(), responses: okResp() },
+    delete: { summary: 'Delete a salary structure (generated payslips keep their snapshot)', tags: ['HR'], responses: okResp() },
+  },
+  '/hr/payslips': op('get', 'Payroll register for ?period=YYYY-MM (default current) with status/department/search filters and summary totals', 'HR'),
+  '/hr/payslips/generate': op('post', 'Batch-generate DRAFT payslips for {period} from active salary structures (idempotent — existing slips skipped)', 'HR', { requestBody: jsonBody() }),
+  '/hr/payslips/{id}': op('get', 'Single payslip with parsed breakdown items', 'HR'),
+  '/hr/payslips/{id}/mark-paid': op('patch', 'Settle a DRAFT payslip → PAID and post a SALARIES expense to the ledger (idempotent)', 'HR'),
+  '/hr/leave-requests': {
+    get: { summary: 'Leave register (?status=, ?employeeId=)', tags: ['HR'], responses: okResp() },
+    post: { summary: 'File a leave request — HR may file for anyone; staff with a linked profile may file for themselves; overlapping pending/approved ranges rejected', tags: ['HR'], requestBody: jsonBody(), responses: okResp() },
+  },
+  '/hr/leave-requests/{id}/decide': op('post', 'Approve or reject a PENDING request (notifies the staff login)', 'HR', { requestBody: jsonBody() }),
+
   // ── Academic ────────────────────────────────────────────────────────────
   '/academics/sessions': { get: op('get', 'List academic sessions with nested terms', 'Academic')['get'],
     post: op('post', 'Create a session (optionally set as current)', 'Academic', { requestBody: jsonBody() })['post'] },
