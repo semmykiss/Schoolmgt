@@ -139,7 +139,7 @@ rate-limit → auth (JWT cookie) → role/permission check → zod body validati
 
 - Base path: **`/api/v1`** — plain REST route handlers (no server actions).
 - Machine-readable **OpenAPI 3.1** document: **`GET /api/v1/openapi.json`**, browsable in-app under **`#/api-docs`** ("API Explorer") with per-endpoint descriptions.
-- Route families: `auth/*`, `users`, `roles`, `school`, `branches`, `settings`, `academics/*` (sessions, terms, classes, sections, subjects, class-subjects, lesson-plans, promotions), `admissions/applicants/*`, `students/*` (incl. `import`, `export`, `:id/exit`, `:id/guardians`), `guardians`, `timetable/*` (periods, slots, grid, copy), `attendance/*` (students, staff, summary), `exams/*` (types, schedules, grading-scales, marks-sheet, broadsheet, publish), `report-cards`, `assignments/*`, `fees/*` (structures, invoices, bulk, discounts, payments, summary), `accounts/*` (ledger, summary), `hr/*` (employees, salary-structures, payslips, leave-requests, self), `inventory/*`, `library/*`, `communication/*` (announcements, events, templates, send, logs), `notifications`, `portal/*`, `dashboard`, `search`, `openapi.json`.
+- Route families: `auth/*`, `users`, `roles`, `school`, `branches`, `settings`, `academics/*` (sessions, terms, classes, sections, subjects, class-subjects, lesson-plans, promotions), `admissions/applicants/*`, `students/*` (incl. `import`, `export`, `:id/exit`, `:id/guardians`), `guardians`, `timetable/*` (periods, slots, grid, copy), `attendance/*` (students, staff, summary), `exams/*` (types, schedules, grading-scales, marks-sheet, broadsheet, publish), `report-cards`, `assignments/*`, `fees/*` (structures, invoices, bulk, discounts, payments, summary), `accounts/*` (ledger, summary), `hr/*` (employees, salary-structures, payslips, leave-requests, self), `inventory/*`, `library/*`, `communication/*` (announcements, events, templates, send, logs), `notifications`, `portal/*`, `dashboard`, `search`, `reports/*` (academic, attendance, financial, enrollment, saved-filters, `scheduled-exports` incl. `/tick` cron entry), `openapi.json`.
 
 ## Running with Docker
 
@@ -187,6 +187,34 @@ docker compose cp app:/app/db/custom.db ./backups/custom-$(date +%F).db
 ```
 
 Because the database lives on the `./db` host volume, a plain file copy while the server is idle is equally valid.
+
+## Scheduled exports (unattended cron)
+
+Scheduled report exports (Reports → **Automation** tab) no longer depend on someone clicking **Run now**. Any external scheduler can drive unattended cycles:
+
+- **Run everything that's due** (recommended): `POST /api/v1/reports/scheduled-exports/tick` — finds every ACTIVE schedule (across all schools) whose daily / weekly / monthly window has elapsed since `lastRunAt`, executes it, notifies recipients and writes audit entries. One failing report never blocks the rest of the batch.
+- **Run a single schedule**: `POST /api/v1/reports/scheduled-exports/{id}/run` — same handler the UI "Run now" button uses; also accepts the cron identity.
+
+Both routes accept either a signed-in user with `reports.write` **or** a machine identity — an `x-cron-secret` header whose value matches `CRON_SECRET` from `.env` (compared timing-safely). Sessions and the secret are independent; requests with neither get `401`.
+
+System crontab example (every minute, cheap no-op when nothing is due):
+
+```cron
+* * * * * curl -fsS -X POST -H "x-cron-secret: $CRON_SECRET" \
+  https://your-schooldesk-host/api/v1/reports/scheduled-exports/tick > /dev/null
+```
+
+Or a Kubernetes CronJob / any uptime monitor / `curl` in CI — anything that can send one authenticated POST.
+
+**Bundled poller (zero-config):** for single-host installs, `mini-services/report-scheduler` is a tiny Bun service that hits the tick endpoint every minute so exports run unattended out of the box:
+
+```bash
+cd mini-services/report-scheduler && bun run dev   # health/ops: http://127.0.0.1:3070/health
+```
+
+It reads `CRON_SECRET` from its own `.env` (must match the app's) and exposes `GET /health` (last tick result + counters) and `POST /tick` (out-of-band trigger). Its cadence and target are configurable via `INTERVAL_MS` / `TARGET_URL`. In Docker or k8s deployments you'd typically replace it with the crontab above.
+
+Semantics: a schedule that has never run fires on the first tick after creation, then settles into its calendar window (a missed window — server down over the weekend, for example — catches up exactly once). Paused schedules (`active: false`) are skipped. Every automated run lands in the audit log as `Scheduler (cron)` and notifies recipients who have SchoolDesk accounts, flagging unmatched emails so the school can fix them.
 
 ## Roles & permissions overview
 

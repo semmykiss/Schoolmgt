@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import {
-  Bookmark, CalendarClock, FileDown, Plus, RefreshCw, Trash2,
+  Bookmark, CalendarClock, Clock, FileDown, Plus, RefreshCw, Trash2,
 } from 'lucide-react'
 import { api, qk } from '@/lib/client/api'
 import { useSession } from '@/stores/session'
@@ -221,7 +221,7 @@ export function AutomationTab({ onApply }: Props) {
               Scheduled exports
             </CardTitle>
             <CardDescription className="text-xs">
-              Recurring CSV exports of any report. Each run notifies recipients with SchoolDesk accounts.
+              Recurring CSV exports of any report. Each run notifies recipients with SchoolDesk accounts. Automated cycles fire unattended via the cron tick endpoint — “Run now” stays available for ad-hoc runs.
             </CardDescription>
           </div>
           {canWrite && (
@@ -297,6 +297,16 @@ export function AutomationTab({ onApply }: Props) {
                 </TableBody>
               </Table>
             </div>
+          )}
+          {!exports.isLoading && (exports.data?.items.length ?? 0) > 0 && (
+            <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-muted/50 p-2.5 text-xs text-muted-foreground">
+              <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span>
+                Automated cycles: a cron poller calls{' '}
+                <code className="rounded bg-muted px-1 font-mono">POST /api/v1/reports/scheduled-exports/tick</code>{' '}
+                every minute with the <code className="rounded bg-muted px-1 font-mono">x-cron-secret</code> header and runs whatever is due (daily / weekly / monthly windows). No manual “Run now” needed — see README → “Scheduled exports (unattended cron)”.
+              </span>
+            </p>
           )}
         </CardContent>
       </Card>

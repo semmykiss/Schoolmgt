@@ -1,0 +1,10 @@
+{
+  "name": "schooldesk-report-scheduler",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Unattended cron poller for SchoolDesk scheduled report exports — POSTs the tick endpoint every minute",
+  "scripts": {
+    "dev": "bun --hot index.ts",
+    "start": "bun index.ts"
+  }
+}

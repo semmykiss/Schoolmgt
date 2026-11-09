@@ -1,60 +1,39 @@
 import { db } from '@/lib/db'
 import { createHandler } from '@/lib/api/handler'
-import { notFound, badRequest } from '@/lib/api/errors'
-import { buildReportCsv, reportCsvString, REPORT_LABELS } from '@/lib/api/report-data'
-import { notifyUsers } from '@/lib/api/notify'
+import { ApiError, notFound, badRequest } from '@/lib/api/errors'
+import { getAuthUser } from '@/lib/auth/session'
+import { can } from '@/lib/auth/permissions'
+import { cronSecretValid } from '@/lib/api/cron-auth'
+import { runScheduledExport } from '@/lib/api/scheduled-export-runner'
 
 /**
- * Run a scheduled export now: rebuild the report CSV, stamp lastRunAt and
- * notify any recipients who have SchoolDesk accounts (emails without an
- * account are counted and reported back so the school can fix them).
+ * Run a scheduled export now. Two accepted identities:
+ *
+ *  1. Signed-in user with `reports.write` (the UI "Run now" button) —
+ *     scoped to the user's school, CSV returned for download.
+ *  2. Unattended cron caller with `x-cron-secret: <CRON_SECRET>` — the
+ *     exact pattern for pointing a crontab at a single schedule:
+ *       curl -X POST -H "x-cron-secret: $CRON_SECRET" \
+ *         https://<host>/api/v1/reports/scheduled-exports/<id>/run
+ *     (For all-schedules-at-once, prefer /scheduled-exports/tick.)
  */
-export const POST = createHandler({ permission: 'reports.write' }, async ({ user, params, audit }) => {
-  const job = await db.scheduledExport.findFirst({ where: { id: params.id, schoolId: user.schoolId } })
+export const POST = createHandler({ auth: false }, async ({ req, params }) => {
+  const cronOk = await cronSecretValid(req)
+  const user = await getAuthUser(req)
+  if (!user && !cronOk) throw new ApiError(401, 'Please sign in to continue')
+  if (user && !can(user.permissions, 'reports.write')) {
+    throw new ApiError(403, 'Missing permission: reports.write', 'FORBIDDEN')
+  }
+
+  const job = await db.scheduledExport.findFirst({
+    where: { id: params.id, ...(user ? { schoolId: user.schoolId } : {}) },
+  })
   if (!job) throw notFound('Scheduled export not found')
   if (!job.active) throw badRequest('This schedule is paused — activate it before running')
 
-  let filters: Record<string, unknown> = {}
-  try { filters = JSON.parse(job.filters) } catch { /* default */ }
-  let recipients: string[] = []
-  try { recipients = JSON.parse(job.recipients) } catch { /* default */ }
-
-  const file = await buildReportCsv(job.reportKey, user.schoolId, filters)
-  const csv = reportCsvString(file)
-  const filename = `${file.filename}-${new Date().toISOString().slice(0, 10)}.csv`
-
-  await db.scheduledExport.update({
-    where: { id: job.id },
-    data: { lastRunAt: new Date() },
-  })
-
-  const users = recipients.length
-    ? await db.user.findMany({
-        where: { schoolId: user.schoolId, email: { in: recipients }, status: 'ACTIVE' },
-        select: { id: true, role: true, email: true },
-      })
-    : []
-  const matched = new Set(users.map(u => u.email.toLowerCase()))
-
-  const notified = await notifyUsers(user.schoolId, users, {
-    title: `Report ready: ${job.name}`,
-    body: `${REPORT_LABELS[job.reportKey] ?? job.reportKey} — ${file.rows.length} row(s) exported as CSV.`,
-    type: 'SYSTEM',
-    link: '/reports',
-  })
-
-  audit({
-    action: 'EXPORT',
-    entity: 'ScheduledExport',
-    entityId: job.id,
-    summary: `Ran scheduled export "${job.name}" — ${file.rows.length} rows, ${notified} notified`,
-  })
-
-  return {
-    filename,
-    csv,
-    rowCount: file.rows.length,
-    notified,
-    unmatchedRecipients: recipients.filter(email => !matched.has(email.toLowerCase())),
-  }
+  return runScheduledExport(
+    job,
+    { id: user?.id ?? null, name: user?.fullName ?? 'Scheduler (cron)' },
+    { includeCsv: true, trigger: user ? 'manual' : 'cron' },
+  )
 })
