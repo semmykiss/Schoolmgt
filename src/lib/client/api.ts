@@ -92,6 +92,7 @@ export const qk = {
   payslips: (filters?: Record<string, unknown>) => ['hr', 'payslips', filters ?? {}] as const,
   payslip: (id?: string) => ['hr', 'payslip', id ?? 'none'] as const,
   leaveRequests: (filters?: Record<string, unknown>) => ['hr', 'leave-requests', filters ?? {}] as const,
+  hrSelf: ['hr', 'self'] as const,
   // admissions + students
   applicants: (filters?: Record<string, unknown>) => ['admissions', 'applicants', filters ?? {}] as const,
   students: (filters?: Record<string, unknown>) => ['students', filters ?? {}] as const,

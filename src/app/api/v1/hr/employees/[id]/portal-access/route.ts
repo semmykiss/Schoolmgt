@@ -11,7 +11,7 @@ import { generateTempPassword } from '@/lib/domain/hr'
  *   { action: 'RESET_PASSWORD', password? }             → new password for the linked user
  * When `password` is omitted a temporary one is generated and returned ONCE.
  */
-export const POST = createHandler({ permission: 'hr.write', body: portalAccessSchema }, async ({ user, params, body, audit }) => {
+export const POST = createHandler({ permission: 'hr.employees.portal', body: portalAccessSchema }, async ({ user, params, body, audit }) => {
   const employee = await db.employee.findFirst({ where: { id: params.id, schoolId: user.schoolId } })
   if (!employee) throw notFound('Staff member not found')
   const fullName = `${employee.firstName} ${employee.lastName}`

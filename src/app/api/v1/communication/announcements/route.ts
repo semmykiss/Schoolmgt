@@ -29,7 +29,7 @@ export const GET = createHandler({ permission: 'communication.read' }, async ({ 
   return paginated(items, total, q)
 })
 
-export const POST = createHandler({ permission: 'communication.write', body: announcementCreateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'communication.announcements.write', body: announcementCreateSchema }, async ({ user, body, audit }) => {
   if (body.audience === 'CLASS') {
     if (!body.classId) throw notFound('Pick a class for class-scoped announcements')
     const cls = await db.schoolClass.findFirst({ where: { id: body.classId, schoolId: user.schoolId } })

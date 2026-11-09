@@ -45,7 +45,7 @@ export const GET = createHandler({ permission: 'hr.read' }, async ({ user, query
  * POST /hr/salary-structures — attach a pay scale to an employee. Activating
  * a structure deactivates the employee's previous one (history preserved).
  */
-export const POST = createHandler({ permission: 'hr.write', body: salaryStructureCreateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'hr.salaries.write', body: salaryStructureCreateSchema }, async ({ user, body, audit }) => {
   const employee = await db.employee.findFirst({
     where: { id: body.employeeId, schoolId: user.schoolId, status: 'ACTIVE' },
   })

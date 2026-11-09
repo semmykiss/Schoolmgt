@@ -22,7 +22,7 @@ export const GET = createHandler({ permission: 'academic.read' }, async ({ user,
   return paginated(items, total, q)
 })
 
-export const POST = createHandler({ permission: 'academic.write', body: subjectCreateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'academic.subjects.write', body: subjectCreateSchema }, async ({ user, body, audit }) => {
   const name = body.name.trim()
   if (await db.subject.findFirst({ where: { schoolId: user.schoolId, name } })) {
     throw conflict(`Subject "${name}" already exists`)

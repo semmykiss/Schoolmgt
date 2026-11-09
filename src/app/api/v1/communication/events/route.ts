@@ -3,6 +3,8 @@ import { createHandler } from '@/lib/api/handler'
 import { notFound } from '@/lib/api/errors'
 import { parseListQuery, paginated } from '@/lib/api/paginate'
 import { eventCreateSchema } from '@/lib/validation/communication'
+import { resolveAudienceUsers } from '@/lib/api/audience'
+import { notifyUsers } from '@/lib/api/notify'
 
 export const GET = createHandler({ permission: 'communication.read' }, async ({ user, query }) => {
   const where: Record<string, unknown> = { schoolId: user.schoolId }
@@ -29,7 +31,7 @@ export const GET = createHandler({ permission: 'communication.read' }, async ({ 
   return wantsPaging ? paginated(items, total, q) : { items, total }
 })
 
-export const POST = createHandler({ permission: 'communication.write', body: eventCreateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'communication.events.write', body: eventCreateSchema }, async ({ user, body, audit }) => {
   if (body.audience === 'CLASS' && !body.classId) {
     throw notFound('Pick a class for class-scoped events')
   }
@@ -47,6 +49,16 @@ export const POST = createHandler({ permission: 'communication.write', body: eve
     },
     include: { class: { select: { id: true, name: true } } },
   })
-  audit({ action: 'create', entity: 'CalendarEvent', entityId: created.id, summary: `Scheduled event "${body.title}" (${body.startDate})` })
+
+  // In-app heads-up to the affected audience so the event lands in portals.
+  const audienceUsers = await resolveAudienceUsers(user.schoolId, body.audience, created.classId)
+  await notifyUsers(user.schoolId, audienceUsers.map(u => u.id), {
+    title: `New event — ${created.title}`,
+    body: `${created.startDate}${created.endDate !== created.startDate ? ` → ${created.endDate}` : ''}. Check the portal calendar for details.`,
+    type: 'ANNOUNCEMENT',
+    link: u => u.role === 'PARENT' || u.role === 'STUDENT' ? '#/portal' : '#/calendar',
+  })
+
+  audit({ action: 'create', entity: 'CalendarEvent', entityId: created.id, summary: `Scheduled event "${body.title}" (${body.startDate}) — ${audienceUsers.length} notified` })
   return created
 })

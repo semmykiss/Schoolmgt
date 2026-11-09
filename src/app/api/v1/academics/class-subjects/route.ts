@@ -30,7 +30,7 @@ export const GET = createHandler({ permission: 'academic.read' }, async ({ user,
   }
 })
 
-export const POST = createHandler({ permission: 'academic.write', body: classSubjectCreateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'academic.subjects.write', body: classSubjectCreateSchema }, async ({ user, body, audit }) => {
   const [schoolClass, subject] = await Promise.all([
     db.schoolClass.findFirst({ where: { id: body.classId, schoolId: user.schoolId } }),
     db.subject.findFirst({ where: { id: body.subjectId, schoolId: user.schoolId } }),

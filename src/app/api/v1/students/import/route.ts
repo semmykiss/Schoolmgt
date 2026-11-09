@@ -8,7 +8,7 @@ import { admissionNumber, schoolPrefix } from '@/lib/domain/numbering'
  * Bulk CSV import. Rows may include a className to auto-place students and
  * guardian name/phone to create+link a guardian. Returns a per-row report.
  */
-export const POST = createHandler({ permission: 'students.write', body: studentImportSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'students.import', body: studentImportSchema }, async ({ user, body, audit }) => {
   const classes = await db.schoolClass.findMany({ where: { schoolId: user.schoolId }, select: { id: true, name: true } })
   const byName = new Map(classes.map(c => [c.name.toLowerCase(), c]))
 

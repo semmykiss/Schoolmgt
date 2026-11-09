@@ -6,7 +6,7 @@ import { examTypeUpdateSchema } from '@/lib/validation/exams'
 
 const getId = (p: Record<string, string>) => requireId(p.id, 'Exam type')
 
-export const PATCH = createHandler({ permission: 'exams.write', body: examTypeUpdateSchema }, async ({ user, params, body, audit }) => {
+export const PATCH = createHandler({ permission: 'exams.setup', body: examTypeUpdateSchema }, async ({ user, params, body, audit }) => {
   const id = getId(params as Record<string, string>)
   const existing = await db.examType.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!existing) throw notFound('Exam type not found')
@@ -27,7 +27,7 @@ export const PATCH = createHandler({ permission: 'exams.write', body: examTypeUp
   return updated
 })
 
-export const DELETE = createHandler({ permission: 'exams.write' }, async ({ user, params, audit }) => {
+export const DELETE = createHandler({ permission: 'exams.setup' }, async ({ user, params, audit }) => {
   const id = getId(params as Record<string, string>)
   const existing = await db.examType.findFirst({
     where: { id, schoolId: user.schoolId },

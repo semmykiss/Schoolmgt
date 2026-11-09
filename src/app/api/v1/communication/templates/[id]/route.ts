@@ -12,7 +12,7 @@ async function getTemplate(schoolId: string, id: string) {
 export const GET = createHandler({ permission: 'communication.read' }, async ({ user, params }) =>
   getTemplate(user.schoolId, params.id))
 
-export const PATCH = createHandler({ permission: 'communication.write', body: templateUpdateSchema }, async ({ user, params, body, audit }) => {
+export const PATCH = createHandler({ permission: 'communication.templates.write', body: templateUpdateSchema }, async ({ user, params, body, audit }) => {
   const template = await getTemplate(user.schoolId, params.id)
 
   if (body.name && body.name !== template.name) {
@@ -36,7 +36,7 @@ export const PATCH = createHandler({ permission: 'communication.write', body: te
   return updated
 })
 
-export const DELETE = createHandler({ permission: 'communication.write' }, async ({ user, params, audit }) => {
+export const DELETE = createHandler({ permission: 'communication.templates.write' }, async ({ user, params, audit }) => {
   const template = await getTemplate(user.schoolId, params.id)
   await db.messageTemplate.delete({ where: { id: template.id } })
   audit({ action: 'delete', entity: 'MessageTemplate', entityId: template.id, summary: `Deleted template "${template.name}"` })

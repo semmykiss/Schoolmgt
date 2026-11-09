@@ -21,7 +21,7 @@ export const GET = createHandler({ permission: 'academic.read' }, async ({ user,
   return paginated(items, total, q)
 })
 
-export const POST = createHandler({ permission: 'academic.write', body: sessionCreateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'academic.sessions.write', body: sessionCreateSchema }, async ({ user, body, audit }) => {
   const name = body.name.trim()
   if (await db.academicSession.findFirst({ where: { schoolId: user.schoolId, name } })) {
     throw conflict(`Session "${name}" already exists`)

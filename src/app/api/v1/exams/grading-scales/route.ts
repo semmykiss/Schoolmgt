@@ -12,7 +12,7 @@ export const GET = createHandler({ permission: 'exams.read' }, async ({ user }) 
   return { items }
 })
 
-export const POST = createHandler({ permission: 'exams.write', body: gradingScaleCreateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'exams.setup', body: gradingScaleCreateSchema }, async ({ user, body, audit }) => {
   const dup = await db.gradingScale.findFirst({
     where: { schoolId: user.schoolId, name: body.name },
     select: { id: true },

@@ -15,7 +15,7 @@ async function getEvent(schoolId: string, id: string) {
 export const GET = createHandler({ permission: 'communication.read' }, async ({ user, params }) =>
   getEvent(user.schoolId, params.id))
 
-export const PATCH = createHandler({ permission: 'communication.write', body: eventUpdateSchema }, async ({ user, params, body, audit }) => {
+export const PATCH = createHandler({ permission: 'communication.events.write', body: eventUpdateSchema }, async ({ user, params, body, audit }) => {
   const event = await getEvent(user.schoolId, params.id)
   if (body.audience === 'CLASS' && !body.classId && !event.classId) {
     throw notFound('Pick a class for class-scoped events')
@@ -38,7 +38,7 @@ export const PATCH = createHandler({ permission: 'communication.write', body: ev
   return updated
 })
 
-export const DELETE = createHandler({ permission: 'communication.write' }, async ({ user, params, audit }) => {
+export const DELETE = createHandler({ permission: 'communication.events.write' }, async ({ user, params, audit }) => {
   const event = await getEvent(user.schoolId, params.id)
   await db.calendarEvent.delete({ where: { id: event.id } })
   audit({ action: 'delete', entity: 'CalendarEvent', entityId: event.id, summary: `Deleted event "${event.title}"` })

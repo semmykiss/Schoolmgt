@@ -2,7 +2,7 @@ import {
   LayoutDashboard, ClipboardList, GraduationCap, BriefcaseBusiness, BookOpen,
   CalendarRange, ClipboardCheck, FileSpreadsheet, NotebookPen, Wallet, Landmark,
   Package, Library, Megaphone, CalendarDays, MessageSquareText, BarChart3,
-  Users, ShieldCheck, ScrollText, Settings2, Braces, type LucideIcon,
+  Users, ShieldCheck, ScrollText, Settings2, Braces, UserCog, type LucideIcon,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -32,6 +32,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: 'admissions', label: 'Admissions', icon: ClipboardList, phase: 2, permission: 'admissions.read' },
       { key: 'students', label: 'Students', icon: GraduationCap, phase: 2, permission: 'students.read' },
       { key: 'staff', label: 'Staff & HR', icon: BriefcaseBusiness, phase: 8, permission: 'hr.read' },
+      { key: 'self-service', label: 'Self-Service', icon: UserCog, phase: 8 },
     ],
   },
   {
@@ -89,7 +90,7 @@ export const MODULES: Record<string, NavItem> = Object.fromEntries(
 )
 
 /** Phases delivered so far — nav phase badges only show for unbuilt modules. */
-export const BUILT_PHASES = new Set([0, 1, 2, 3, 4, 5, 6, 7])
+export const BUILT_PHASES = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8])
 
 /** What each phase delivers — powers the "coming soon" views. */
 export const PHASE_CONTENT: Record<number, { title: string; bullets: string[] }> = {

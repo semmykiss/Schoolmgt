@@ -4,7 +4,7 @@ import { notFound } from '@/lib/api/errors'
 import { requireId } from '@/lib/api/paginate'
 import { lessonPlanUpdateSchema } from '@/lib/validation/academic'
 
-export const PATCH = createHandler({ permission: 'academic.write', body: lessonPlanUpdateSchema }, async ({ user, params, body, audit }) => {
+export const PATCH = createHandler({ permission: 'academic.lessonplans.write', body: lessonPlanUpdateSchema }, async ({ user, params, body, audit }) => {
   const id = requireId(params.id, 'Lesson plan')
   const plan = await db.lessonPlan.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!plan) throw notFound('Lesson plan not found')
@@ -24,7 +24,7 @@ export const PATCH = createHandler({ permission: 'academic.write', body: lessonP
   return { ok: true }
 })
 
-export const DELETE = createHandler({ permission: 'academic.write' }, async ({ user, params, audit }) => {
+export const DELETE = createHandler({ permission: 'academic.lessonplans.write' }, async ({ user, params, audit }) => {
   const id = requireId(params.id, 'Lesson plan')
   const plan = await db.lessonPlan.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!plan) throw notFound('Lesson plan not found')

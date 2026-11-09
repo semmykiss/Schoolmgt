@@ -35,6 +35,7 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { FieldError } from '@/components/shared/field-error'
 import { StatCard } from '@/components/shared/stat-card'
+import { PayslipDialog } from '@/components/modules/staff/payslip-document'
 import { PageHeader } from '@/components/shared/page-header'
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -155,7 +156,8 @@ export function StaffView() {
 
 function EmployeesTab() {
   const qc = useQueryClient()
-  const canWrite = useSession(s => s.can('hr.write'))
+  const canWrite = useSession(s => s.can('hr.employees.write'))
+  const canProvision = useSession(s => s.can('hr.employees.portal'))
   const [department, setDepartment] = useState('all')
   const [status, setStatus] = useState('all')
   const [portal, setPortal] = useState('all')
@@ -230,7 +232,7 @@ function EmployeesTab() {
           <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Edit ${row.original.fullName}`} onClick={() => { setEditing(row.original); setDialogOpen(true) }}>
             <Pencil className="h-4 w-4" />
           </Button>
-          {canWrite && (
+          {canProvision && (
             <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Portal access for ${row.original.fullName}`} onClick={() => setPortalTarget(row.original)}>
               <KeyRound className="h-4 w-4" />
             </Button>
@@ -243,7 +245,7 @@ function EmployeesTab() {
         </div>
       ),
     },
-  ], [canWrite])
+  ], [canWrite, canProvision])
 
   return (
     <div className="flex flex-col gap-4">
@@ -583,7 +585,7 @@ function EmployeeDetailDialog({ employeeId, onOpenChange }: {
   onOpenChange: (o: boolean) => void
 }) {
   const qc = useQueryClient()
-  const canWrite = useSession(s => s.can('hr.write'))
+  const canWrite = useSession(s => s.can('hr.salaries.write'))
   const { data: emp, isLoading } = useQuery({
     queryKey: qk.hrEmployee(employeeId),
     queryFn: () => api<EmployeeDetail>(`/hr/employees/${employeeId}`),
@@ -821,7 +823,8 @@ function StructureForm({ employeeId, onDone }: { employeeId: string; onDone: () 
 
 function PayrollTab() {
   const qc = useQueryClient()
-  const canWrite = useSession(s => s.can('hr.write'))
+  const canWrite = useSession(s => s.can('hr.payroll.write'))
+  const canSettle = useSession(s => s.can('hr.payroll.settle'))
   const [period, setPeriod] = useState(periodOf())
   const [status, setStatus] = useState('all')
   const [viewSlip, setViewSlip] = useState<PayslipRow | null>(null)
@@ -886,7 +889,7 @@ function PayrollTab() {
           <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`View payslip for ${row.original.employeeName}`} onClick={() => setViewSlip(row.original)}>
             <Eye className="h-4 w-4" />
           </Button>
-          {canWrite && row.original.status === 'DRAFT' && (
+          {canSettle && row.original.status === 'DRAFT' && (
             <Button size="sm" variant="outline" className="h-8" onClick={() => setMarkTarget(row.original)}>
               <Check className="h-4 w-4" /> Mark paid
             </Button>
@@ -894,7 +897,7 @@ function PayrollTab() {
         </div>
       ),
     },
-  ], [canWrite])
+  ], [canWrite, canSettle])
 
   return (
     <div className="flex flex-col gap-4">
@@ -970,73 +973,6 @@ function PayrollTab() {
         onConfirm={() => generate.mutateAsync()}
       />
     </div>
-  )
-}
-
-function PayslipDialog({ slip, onOpenChange }: {
-  slip: PayslipRow | null
-  onOpenChange: (o: boolean) => void
-}) {
-  const { data: detail, isLoading } = useQuery({
-    queryKey: qk.payslip(slip?.id),
-    queryFn: () => api<PayslipRow>(`/hr/payslips/${slip!.id}`),
-    enabled: !!slip,
-  })
-  const items = detail?.items ?? []
-  const earnings = items.filter(i => i.type !== 'DEDUCTION')
-  const deductions = items.filter(i => i.type === 'DEDUCTION')
-
-  return (
-    <Dialog open={!!slip} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Payslip — {slip?.employeeName}</DialogTitle>
-          <DialogDescription>
-            {slip ? `${periodLabel(slip.period)} · ${slip.employee.staffCode}` : ''}
-          </DialogDescription>
-        </DialogHeader>
-        {isLoading || !detail ? (
-          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-        ) : (
-          <div className="flex flex-col gap-3 text-sm">
-            <div className="flex flex-col gap-1">
-              {earnings.map(i => (
-                <div key={i.label} className="flex items-center justify-between">
-                  <span className="text-muted-foreground">{i.label}</span>
-                  <span className="tabular-nums">{formatNaira(i.amount)}</span>
-                </div>
-              ))}
-              <div className="flex items-center justify-between border-t pt-1 font-medium">
-                <span>Gross</span><span className="tabular-nums">{formatNaira(detail.grossAmount)}</span>
-              </div>
-            </div>
-            {deductions.length > 0 && (
-              <div className="flex flex-col gap-1">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Deductions</p>
-                {deductions.map(i => (
-                  <div key={i.label} className="flex items-center justify-between">
-                    <span className="text-muted-foreground">{i.label}</span>
-                    <span className="tabular-nums text-rose-600 dark:text-rose-400">−{formatNaira(i.amount)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 font-semibold">
-              <span>Net pay</span>
-              <span className="tabular-nums">{formatNaira(detail.netAmount)}</span>
-            </div>
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Status</span><StatusBadge status={detail.status} />
-            </div>
-            {detail.paidAt && (
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Paid on</span><span>{prettyDate(detail.paidAt)}</span>
-              </div>
-            )}
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
   )
 }
 

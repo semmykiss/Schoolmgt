@@ -3,7 +3,7 @@ import { parseListQuery } from '@/lib/api/paginate'
 import { db } from '@/lib/db'
 
 /** CSV export of the current filtered student list (same filters as GET /students). */
-export const GET = createHandler({ permission: 'students.read' }, async ({ user, query }) => {
+export const GET = createHandler({ permission: 'students.export' }, async ({ user, query }) => {
   const q = parseListQuery(query, { pageSize: 2000 })
   const where: Record<string, unknown> = { schoolId: user.schoolId }
   const classId = query.get('classId')

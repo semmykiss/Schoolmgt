@@ -154,6 +154,7 @@ export interface StudentPortalSummary {
     }[]
   }
   timetableToday: { period: string; startTime: string; endTime: string; subject: string | null; teacher: string | null; isBreak: boolean }[]
+  events: { id: string; title: string; description: string | null; type: string; startDate: string; endDate: string }[]
   announcements: { id: string; title: string; body: string; publishedAt: string | null; pinned: boolean }[]
 }
 
@@ -178,7 +179,7 @@ export async function studentPortalSummary(
     date: { gte: since, lte: today },
   }
 
-  const [attGroups, card, invoices, homeworkRows, slots, announcements] = await Promise.all([
+  const [attGroups, card, invoices, homeworkRows, slots, announcements, events] = await Promise.all([
     db.studentAttendance.groupBy({ by: ['status'], where: attendanceWhere, _count: { _all: true } }),
     db.reportCard.findFirst({
       where: { schoolId, studentId: student.id, published: true, exam: { publishResults: true } },
@@ -231,6 +232,22 @@ export async function studentPortalSummary(
       orderBy: [{ pinned: 'desc' }, { publishedAt: 'desc' }],
       take: 5,
       select: { id: true, title: true, body: true, publishedAt: true, pinned: true },
+    }),
+    // Upcoming calendar events, same audience rules as announcements so
+    // parents finally see what the school schedules.
+    db.calendarEvent.findMany({
+      where: {
+        schoolId,
+        endDate: { gte: today },
+        OR: [
+          { audience: 'ALL' },
+          { audience: portalAudience },
+          { audience: 'CLASS', classId: student.classId ?? '___' },
+        ],
+      },
+      orderBy: { startDate: 'asc' },
+      take: 6,
+      select: { id: true, title: true, description: true, type: true, startDate: true, endDate: true },
     }),
   ])
 
@@ -307,6 +324,7 @@ export async function studentPortalSummary(
       teacher: employeeName(s.teacher),
       isBreak: s.period.isBreak,
     })),
-    announcements,
+    events,
+    announcements: announcements.map(a => ({ ...a, publishedAt: a.publishedAt?.toISOString() ?? null })),
   }
 }

@@ -6,7 +6,7 @@ import { promotionRunSchema } from '@/lib/validation/academic'
 import { planPromotions, validatePromotionEntries, type PromoClass, type PromoStudent } from '@/lib/domain/promotion'
 
 /** Preview: list students of ?classId with their suggested promotion targets. */
-export const GET = createHandler({ permission: 'students.read' }, async ({ user, params, query }) => {
+export const GET = createHandler({ permission: 'academic.read' }, async ({ user, params, query }) => {
   const classId = requireId(query.get('classId') ?? undefined, 'Class')
   const schoolClass = await db.schoolClass.findFirst({ where: { id: classId, schoolId: user.schoolId } })
   if (!schoolClass) throw notFound('Class not found')
@@ -36,7 +36,7 @@ export const GET = createHandler({ permission: 'students.read' }, async ({ user,
 })
 
 /** Execute: apply the edited plan (promote / hold back / graduate). */
-export const POST = createHandler({ permission: 'students.write', body: promotionRunSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'academic.promotions.write', body: promotionRunSchema }, async ({ user, body, audit }) => {
   const ids = body.entries.map(e => e.studentId)
   const students = await db.student.findMany({
     where: { id: { in: ids }, schoolId: user.schoolId },

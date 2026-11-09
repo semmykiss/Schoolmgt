@@ -6,7 +6,7 @@ import { applicantConvertSchema } from '@/lib/validation/admissions'
 import { admissionNumber, schoolPrefix } from '@/lib/domain/numbering'
 
 /** Convert an applicant (INTERVIEW / WAITLISTED / APPLIED) into an enrolled student. */
-export const POST = createHandler({ permission: 'admissions.write', body: applicantConvertSchema }, async ({ user, params, body, audit }) => {
+export const POST = createHandler({ permission: 'admissions.convert', body: applicantConvertSchema }, async ({ user, params, body, audit }) => {
   const id = requireId(params.id, 'Applicant')
   const applicant = await db.applicant.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!applicant) throw notFound('Applicant not found')

@@ -5,18 +5,31 @@ import { parseListQuery, paginated } from '@/lib/api/paginate'
 import { leaveRequestCreateSchema } from '@/lib/validation/hr'
 import { employeeOfUser } from '@/lib/api/portal'
 import { can } from '@/lib/auth/permissions'
+import { notifyUsers, usersWithPermission } from '@/lib/api/notify'
 import { rangesOverlap, LEAVE_TYPE_LABEL } from '@/lib/domain/hr'
 
 /**
  * GET /hr/leave-requests — leave register with filters (?status=, ?employeeId=).
+ * Staff with `hr.read` see the whole school register; everyone else (e.g. a
+ * teacher) falls back to their OWN requests only — powers self-service.
  */
-export const GET = createHandler({ permission: 'hr.read' }, async ({ user, query }) => {
+export const GET = createHandler({}, async ({ user, query }) => {
+  const manager = can(user.permissions, 'hr.read')
+  const self = manager ? null : await employeeOfUser(user.schoolId, user.id)
+  if (!manager && !self) {
+    throw forbidden('Your account is not linked to a staff profile — contact the school office')
+  }
+
   const q = parseListQuery(query, { pageSize: 25 })
   const where: Record<string, unknown> = { schoolId: user.schoolId }
-  const status = query.get('status')
-  if (status) where.status = status
-  const employeeId = query.get('employeeId')
-  if (employeeId) where.employeeId = employeeId
+  if (!manager) {
+    where.employeeId = self!.id
+  } else {
+    const status = query.get('status')
+    if (status) where.status = status
+    const employeeId = query.get('employeeId')
+    if (employeeId) where.employeeId = employeeId
+  }
 
   const [rows, total] = await Promise.all([
     db.leaveRequest.findMany({
@@ -90,7 +103,21 @@ export const POST = createHandler({ body: leaveRequestCreateSchema }, async ({ u
       endDate: body.endDate,
       reason: body.reason || null,
     },
+    include: { employee: { select: { firstName: true, lastName: true } } },
   })
+
+  // A staff member filing for themselves pings everyone who can approve it.
+  if (!manager) {
+    const approvers = await usersWithPermission(user.schoolId, 'hr.leave.write')
+    const reasonSuffix = body.reason ? ` — “${body.reason.slice(0, 80)}”` : ''
+    await notifyUsers(user.schoolId, approvers.map(a => a.id), {
+      title: 'Leave request awaiting your approval',
+      body: `${created.employee.firstName} ${created.employee.lastName} requested ${LEAVE_TYPE_LABEL[body.type]} (${body.startDate} → ${body.endDate})${reasonSuffix}.`,
+      type: 'LEAVE',
+      link: '#/staff',
+    })
+  }
+
   audit({ action: 'create', entity: 'LeaveRequest', entityId: created.id, summary: `Filed ${LEAVE_TYPE_LABEL[body.type]} request (${body.startDate} → ${body.endDate})` })
   return created
 })

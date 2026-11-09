@@ -4,7 +4,7 @@ import { notFound } from '@/lib/api/errors'
 import { requireId } from '@/lib/api/paginate'
 
 /** Set this term (and its session) as the current one — single source of "today's term". */
-export const POST = createHandler({ permission: 'academic.write' }, async ({ user, params, audit }) => {
+export const POST = createHandler({ permission: 'academic.sessions.write' }, async ({ user, params, audit }) => {
   const id = requireId(params.id, 'Term')
   const term = await db.term.findFirst({ where: { id, schoolId: user.schoolId }, include: { session: true } })
   if (!term) throw notFound('Term not found')

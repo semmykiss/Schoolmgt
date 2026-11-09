@@ -1,6 +1,7 @@
 import { db } from '@/lib/db'
 import { createHandler } from '@/lib/api/handler'
 import { notFound } from '@/lib/api/errors'
+import { notifyUsers } from '@/lib/api/notify'
 import { periodLabel } from '@/lib/domain/hr'
 
 /**
@@ -8,10 +9,10 @@ import { periodLabel } from '@/lib/domain/hr'
  * amount to the ledger as a SALARIES expense (source PAYROLL). Idempotent:
  * marking an already-paid slip is a no-op that never double-posts.
  */
-export const PATCH = createHandler({ permission: 'hr.write' }, async ({ user, params, audit }) => {
+export const PATCH = createHandler({ permission: 'hr.payroll.settle' }, async ({ user, params, audit }) => {
   const payslip = await db.payslip.findFirst({
     where: { id: params.id, schoolId: user.schoolId },
-    include: { employee: { select: { firstName: true, lastName: true, staffCode: true } } },
+    include: { employee: { select: { firstName: true, lastName: true, staffCode: true, userId: true } } },
   })
   if (!payslip) throw notFound('Payslip not found')
   const name = `${payslip.employee.firstName} ${payslip.employee.lastName}`
@@ -47,6 +48,17 @@ export const PATCH = createHandler({ permission: 'hr.write' }, async ({ user, pa
     entityId: updated.id,
     summary: `Marked ${periodLabel(updated.period)} payslip for ${name} as paid (₦${(updated.netAmount / 100).toLocaleString('en-NG')})`,
   })
+
+  // Tell the staff member their salary has landed (in-app, if they have a login).
+  if (payslip.employee.userId) {
+    await notifyUsers(user.schoolId, [payslip.employee.userId], {
+      title: `Salary paid — ${periodLabel(updated.period)}`,
+      body: `Net pay ₦${(updated.netAmount / 100).toLocaleString('en-NG')} has been settled. View the payslip breakdown in Self-Service.`,
+      type: 'PAYROLL',
+      link: '#/self-service',
+    })
+  }
+
   return updated
 })
 

@@ -23,7 +23,11 @@ const TAB_ITEMS = [
 ]
 
 export function AcademicSetupView() {
-  const canWrite = useSession(s => s.can('academic.write'))
+  const canSessions = useSession(s => s.can('academic.sessions.write'))
+  const canClasses = useSession(s => s.can('academic.classes.write'))
+  const canSubjects = useSession(s => s.can('academic.subjects.write'))
+  const canLessonPlans = useSession(s => s.can('academic.lessonplans.write'))
+  const canPromotions = useSession(s => s.can('academic.promotions.write'))
   const [tab, setTab] = useState('sessions')
 
   return (
@@ -52,22 +56,22 @@ export function AcademicSetupView() {
         </div>
 
         <TabsContent value="sessions" className="mt-4">
-          <SessionsTermsTab canWrite={canWrite} />
+          <SessionsTermsTab canWrite={canSessions} />
         </TabsContent>
         <TabsContent value="classes" className="mt-4">
-          <ClassesTab canWrite={canWrite} />
+          <ClassesTab canWrite={canClasses} />
         </TabsContent>
         <TabsContent value="subjects" className="mt-4">
-          <SubjectsTab canWrite={canWrite} />
+          <SubjectsTab canWrite={canSubjects} />
         </TabsContent>
         <TabsContent value="assignment" className="mt-4">
-          <AssignmentTab canWrite={canWrite} />
+          <AssignmentTab canWrite={canSubjects} />
         </TabsContent>
         <TabsContent value="plans" className="mt-4">
-          <LessonPlansTab canWrite={canWrite} />
+          <LessonPlansTab canWrite={canLessonPlans} />
         </TabsContent>
         <TabsContent value="promotions" className="mt-4">
-          <PromotionsTab canWrite={canWrite} />
+          <PromotionsTab canWrite={canPromotions} />
         </TabsContent>
       </Tabs>
     </motion.div>

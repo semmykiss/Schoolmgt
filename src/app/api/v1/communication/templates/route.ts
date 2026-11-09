@@ -23,7 +23,7 @@ export const GET = createHandler({ permission: 'communication.read' }, async ({ 
   return paginated(items, total, q)
 })
 
-export const POST = createHandler({ permission: 'communication.write', body: templateCreateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'communication.templates.write', body: templateCreateSchema }, async ({ user, body, audit }) => {
   const existing = await db.messageTemplate.findFirst({
     where: { schoolId: user.schoolId, name: body.name },
     select: { id: true },

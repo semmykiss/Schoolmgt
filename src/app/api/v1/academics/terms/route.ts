@@ -15,7 +15,7 @@ export const GET = createHandler({ permission: 'academic.read' }, async ({ user,
   return { items }
 })
 
-export const POST = createHandler({ permission: 'academic.write', body: termCreateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'academic.sessions.write', body: termCreateSchema }, async ({ user, body, audit }) => {
   const session = await db.academicSession.findFirst({ where: { id: body.sessionId, schoolId: user.schoolId } })
   if (!session) throw notFound('Session not found')
 

@@ -38,7 +38,7 @@ export const GET = createHandler({ permission: 'academic.read' }, async ({ user,
   })), total, q)
 })
 
-export const POST = createHandler({ permission: 'academic.write', body: lessonPlanCreateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'academic.lessonplans.write', body: lessonPlanCreateSchema }, async ({ user, body, audit }) => {
   const classSubject = await db.classSubject.findFirst({
     where: { id: body.classSubjectId, schoolId: user.schoolId },
     include: { class: true, subject: true },

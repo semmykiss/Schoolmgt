@@ -4,6 +4,7 @@ import { notFound, badRequest } from '@/lib/api/errors'
 import { paymentCreateSchema } from '@/lib/validation/fees'
 import { balanceOf, computeStatus, allocateToInstalments } from '@/lib/domain/fees'
 import { extractSeq } from '@/lib/domain/numbering'
+import { notifyUsers, studentCircleUserIds } from '@/lib/api/notify'
 
 export const GET = createHandler({ permission: 'fees.read' }, async ({ user, params }) => {
   const invoiceId = params.id
@@ -17,9 +18,19 @@ export const GET = createHandler({ permission: 'fees.read' }, async ({ user, par
  * Record a payment against an invoice — atomic:
  *   payment row → invoice amountPaid/status → instalment allocation → income ledger entry.
  */
-export const POST = createHandler({ permission: 'fees.write', body: paymentCreateSchema }, async ({ user, params, body, audit }) => {
+export const POST = createHandler({ permission: 'fees.payments.write', body: paymentCreateSchema }, async ({ user, params, body, audit }) => {
   const invoiceId = params.id
-  const invoice = await db.feeInvoice.findFirst({ where: { id: invoiceId, schoolId: user.schoolId } })
+  const invoice = await db.feeInvoice.findFirst({
+    where: { id: invoiceId, schoolId: user.schoolId },
+    include: {
+      student: {
+        select: {
+          userId: true,
+          guardians: { select: { guardian: { select: { userId: true } } } },
+        },
+      },
+    },
+  })
   if (!invoice) throw notFound('Invoice not found')
   if (invoice.status === 'VOID') throw badRequest('Cannot record a payment against a void invoice')
 
@@ -89,8 +100,23 @@ export const POST = createHandler({ permission: 'fees.write', body: paymentCreat
     action: 'CREATE', entity: 'Payment', entityId: result.id,
     summary: `Receipt ${receiptNumberStr} — ₦${(body.amount / 100).toLocaleString('en-NG')} on ${invoice.invoiceNumber}`,
   })
+
+  // Receipt confirmation to the student's portal circle (student + guardians).
+  const circle = await studentCircleUserIds(invoice.student)
+  const remaining = balance - body.amount
+  await notifyUsers(user.schoolId, circle, {
+    title: `Payment received — ${receiptNumberStr}`,
+    body: `${formatNairaBody(body.amount)} recorded on ${invoice.invoiceNumber}${remaining > 0 ? ` · balance ${formatNairaBody(remaining)}` : ' · invoice fully settled'}.`,
+    type: 'FEE',
+    link: '#/portal',
+  })
+
   return result
 })
+
+function formatNairaBody(kobo: number): string {
+  return `₦${(kobo / 100).toLocaleString('en-NG')}`
+}
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'

@@ -57,11 +57,12 @@ const METHOD_LABEL: Record<string, string> = {
   CASH: 'Cash', TRANSFER: 'Transfer', POS: 'POS', CHEQUE: 'Cheque', ONLINE: 'Online',
 }
 
-export function InvoiceDetail({ invoiceId, onClose, onChanged, canWrite }: {
+export function InvoiceDetail({ invoiceId, onClose, onChanged, canWrite, canPay: canPayPerm }: {
   invoiceId: string | null
   onClose: () => void
   onChanged: () => void
   canWrite: boolean
+  canPay: boolean
 }) {
   const qc = useQueryClient()
   const [payAmount, setPayAmount] = useState('')
@@ -106,7 +107,7 @@ export function InvoiceDetail({ invoiceId, onClose, onChanged, canWrite }: {
   })
 
   const lineItems = parseItems(invoice?.items)
-  const canPay = canWrite && invoice && invoice.status !== 'VOID' && invoice.balance > 0
+  const canPay = canPayPerm && invoice && invoice.status !== 'VOID' && invoice.balance > 0
 
   return (
     <Sheet open={!!invoiceId} onOpenChange={o => { if (!o) onClose() }}>

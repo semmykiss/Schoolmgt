@@ -12,7 +12,7 @@ export const GET = createHandler({ permission: 'exams.read' }, async ({ user }) 
   return { items }
 })
 
-export const POST = createHandler({ permission: 'exams.write', body: examTypeCreateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'exams.setup', body: examTypeCreateSchema }, async ({ user, body, audit }) => {
   const exists = await db.examType.findFirst({
     where: { schoolId: user.schoolId, name: body.name },
     select: { id: true },

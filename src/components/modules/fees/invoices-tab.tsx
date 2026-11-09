@@ -70,7 +70,7 @@ type CreateForm = z.infer<typeof createSchema>
 
 const emptyItem = { label: '', amountNaira: '' }
 
-export function InvoicesTab({ canWrite }: { canWrite: boolean }) {
+export function InvoicesTab({ canWrite, canPay: canPayTab }: { canWrite: boolean; canPay: boolean }) {
   const qc = useQueryClient()
   const isAdmin = useSession(s => s.role() === 'ADMIN')
 
@@ -281,7 +281,8 @@ export function InvoicesTab({ canWrite }: { canWrite: boolean }) {
         invoiceId={detailId}
         onClose={() => setDetailId(null)}
         onChanged={invalidateAll}
-        canWrite={canWrite}
+        canWrite={canWrite || canPayTab}
+        canPay={canPayTab}
       />
 
       <ConfirmDialog

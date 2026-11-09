@@ -4,12 +4,13 @@ import { notFound, badRequest } from '@/lib/api/errors'
 import { invoiceBulkSchema } from '@/lib/validation/fees'
 import { computeStatus } from '@/lib/domain/fees'
 import { extractSeq } from '@/lib/domain/numbering'
+import { notifyUsers } from '@/lib/api/notify'
 
 /**
  * Bulk-generate invoices for a class (optionally one section) from a fee
  * structure. Idempotent per term when skipExisting is on.
  */
-export const POST = createHandler({ permission: 'fees.write', body: invoiceBulkSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'fees.invoices.write', body: invoiceBulkSchema }, async ({ user, body, audit }) => {
   const structure = await db.feeStructure.findFirst({
     where: { id: body.feeStructureId, schoolId: user.schoolId, isActive: true },
   })
@@ -25,7 +26,11 @@ export const POST = createHandler({ permission: 'fees.write', body: invoiceBulkS
       ...(body.sectionId ? { sectionId: body.sectionId } : {}),
       status: 'ACTIVE',
     },
-    select: { id: true, firstName: true, lastName: true },
+    select: {
+      id: true, firstName: true, lastName: true,
+      userId: true,
+      guardians: { select: { guardian: { select: { userId: true } } } },
+    },
     orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
   })
   if (students.length === 0) throw badRequest('No active students found for that selection')
@@ -80,6 +85,20 @@ export const POST = createHandler({ permission: 'fees.write', body: invoiceBulkS
     action: 'BULK_CREATE', entity: 'FeeInvoice',
     summary: `Generated ${created.length} invoice(s) from "${structure.name}" for ${cls.name}`,
   })
+
+  // One heads-up per affected portal circle (student + guardians, deduped).
+  const circle = new Set<string>()
+  for (const s of targets) {
+    if (s.userId) circle.add(s.userId)
+    for (const g of s.guardians) if (g.guardian.userId) circle.add(g.guardian.userId)
+  }
+  await notifyUsers(user.schoolId, circle, {
+    title: `New school fees invoice — ${cls.name}`,
+    body: `₦${(structure.totalAmount / 100).toLocaleString('en-NG')} due ${body.dueDate}, from "${structure.name}". View details on the portal.`,
+    type: 'FEE',
+    link: '#/portal',
+  })
+
   return {
     created: created.length,
     skipped: students.length - targets.length,

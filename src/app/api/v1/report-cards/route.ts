@@ -105,7 +105,7 @@ export const GET = createHandler({ permission: 'exams.read' }, async ({ user, qu
  * totals, averages, competition-ranked positions, auto remarks.
  * Existing remarks and published flags are preserved.
  */
-export const POST = createHandler({ permission: 'exams.write', body: reportCardGenerateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'exams.reportcards.write', body: reportCardGenerateSchema }, async ({ user, body, audit }) => {
   const { examId, classId } = body
   if (!examId || !classId) throw badRequest('Select an exam and a class to generate report cards')
 

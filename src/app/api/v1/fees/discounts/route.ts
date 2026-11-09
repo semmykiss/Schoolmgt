@@ -25,7 +25,7 @@ export const GET = createHandler({ permission: 'fees.read' }, async ({ user, que
   return paginated(items, total, q)
 })
 
-export const POST = createHandler({ permission: 'fees.write', body: discountCreateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'fees.discounts.write', body: discountCreateSchema }, async ({ user, body, audit }) => {
   const student = await db.student.findFirst({ where: { id: body.studentId, schoolId: user.schoolId }, select: { id: true, firstName: true, lastName: true } })
   if (!student) throw notFound('Selected student does not exist')
 

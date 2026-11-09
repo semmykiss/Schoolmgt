@@ -4,7 +4,7 @@ import { notFound, badRequest } from '@/lib/api/errors'
 import { feeStructureUpdateSchema } from '@/lib/validation/fees'
 import { subtotalOf } from '@/lib/domain/fees'
 
-export const PATCH = createHandler({ permission: 'fees.write', body: feeStructureUpdateSchema }, async ({ user, params, body, audit }) => {
+export const PATCH = createHandler({ permission: 'fees.structures.write', body: feeStructureUpdateSchema }, async ({ user, params, body, audit }) => {
   const id = params.id
   const existing = await db.feeStructure.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!existing) throw notFound('Fee structure not found')
@@ -41,7 +41,7 @@ export const PATCH = createHandler({ permission: 'fees.write', body: feeStructur
   return updated
 })
 
-export const DELETE = createHandler({ permission: 'fees.write' }, async ({ user, params, audit }) => {
+export const DELETE = createHandler({ permission: 'fees.structures.write' }, async ({ user, params, audit }) => {
   const id = params.id
   const existing = await db.feeStructure.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!existing) throw notFound('Fee structure not found')

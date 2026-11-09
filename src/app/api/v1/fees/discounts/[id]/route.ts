@@ -3,7 +3,7 @@ import { createHandler } from '@/lib/api/handler'
 import { notFound, badRequest } from '@/lib/api/errors'
 import { discountUpdateSchema } from '@/lib/validation/fees'
 
-export const PATCH = createHandler({ permission: 'fees.write', body: discountUpdateSchema }, async ({ user, params, body, audit }) => {
+export const PATCH = createHandler({ permission: 'fees.discounts.write', body: discountUpdateSchema }, async ({ user, params, body, audit }) => {
   const id = params.id
   const existing = await db.discount.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!existing) throw notFound('Discount not found')
@@ -25,7 +25,7 @@ export const PATCH = createHandler({ permission: 'fees.write', body: discountUpd
   return updated
 })
 
-export const DELETE = createHandler({ permission: 'fees.write' }, async ({ user, params, audit }) => {
+export const DELETE = createHandler({ permission: 'fees.discounts.write' }, async ({ user, params, audit }) => {
   const id = params.id
   const existing = await db.discount.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!existing) throw notFound('Discount not found')

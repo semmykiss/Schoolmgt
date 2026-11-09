@@ -186,7 +186,7 @@ function EventDialog({ open, onOpenChange, editing, initialDate }: {
 
 // ── Main view ───────────────────────────────────────────────────────────────
 export function CalendarView() {
-  const canWrite = useSession(s => s.can('communication.write'))
+  const canWrite = useSession(s => s.can('communication.events.write'))
   const qc = useQueryClient()
   const today = new Date()
   const [cursor, setCursor] = useState({ y: today.getFullYear(), m: today.getMonth() })

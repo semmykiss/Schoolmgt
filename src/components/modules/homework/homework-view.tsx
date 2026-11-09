@@ -372,6 +372,7 @@ function SubmissionsDialog({ assignment, open, onOpenChange, canGrade }: {
 export function HomeworkView() {
   const qc = useQueryClient()
   const canWrite = useSession(s => s.can('assignments.write'))
+  const canGrade = useSession(s => s.can('assignments.grade'))
   const [classFilter, setClassFilter] = useState('ALL')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<AssignmentRow | null>(null)
@@ -584,7 +585,7 @@ export function HomeworkView() {
         assignment={viewing}
         open={viewing !== null}
         onOpenChange={o => { if (!o) setViewing(null) }}
-        canGrade={canWrite}
+        canGrade={canGrade}
       />
       <ConfirmDialog
         open={removeTarget !== null}

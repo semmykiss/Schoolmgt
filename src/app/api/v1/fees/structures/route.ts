@@ -28,7 +28,7 @@ export const GET = createHandler({ permission: 'fees.read' }, async ({ user, que
   return paginated(items, total, q)
 })
 
-export const POST = createHandler({ permission: 'fees.write', body: feeStructureCreateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'fees.structures.write', body: feeStructureCreateSchema }, async ({ user, body, audit }) => {
   const [cls, term] = await Promise.all([
     db.schoolClass.findFirst({ where: { id: body.classId, schoolId: user.schoolId }, select: { id: true } }),
     db.term.findFirst({ where: { id: body.termId, schoolId: user.schoolId }, select: { id: true, sessionId: true } }),

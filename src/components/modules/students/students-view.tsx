@@ -838,6 +838,9 @@ function IdCardTab({ student }: { student: StudentDetail }) {
 export function StudentsView() {
   const qc = useQueryClient()
   const canWrite = useSession(s => s.can('students.write'))
+  const canImport = useSession(s => s.can('students.import'))
+  const canExport = useSession(s => s.can('students.export'))
+  const canExit = useSession(s => s.can('students.exit'))
   const [classFilter, setClassFilter] = useState('ALL')
   const [statusFilter, setStatusFilter] = useState('ACTIVE')
   const [createOpen, setCreateOpen] = useState(false)
@@ -916,7 +919,7 @@ export function StudentsView() {
       meta: { label: 'Actions' },
       cell: ({ row }) => {
         const s = row.original
-        if (!canWrite) return null
+        if (!canWrite && !canExit) return null
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -925,7 +928,7 @@ export function StudentsView() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48" onClick={e => e.stopPropagation()}>
-              {s.status === 'ACTIVE' && (
+              {canExit && s.status === 'ACTIVE' && (
                 <DropdownMenuItem onSelect={async () => {
                   const detail = await api<StudentDetail>(`/students/${s.id}`)
                   setExitTarget(detail)
@@ -942,7 +945,7 @@ export function StudentsView() {
         )
       },
     },
-  ], [canWrite])
+  ], [canWrite, canExit])
 
   const exportUrl = useMemo(() => {
     const params = new URLSearchParams()
@@ -997,12 +1000,14 @@ export function StudentsView() {
                 {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Button size="sm" variant="outline" asChild>
-              <a href={exportUrl} download><Download aria-hidden /> Export CSV</a>
-            </Button>
+            {canExport && (
+              <Button size="sm" variant="outline" asChild>
+                <a href={exportUrl} download><Download aria-hidden /> Export CSV</a>
+              </Button>
+            )}
             {canWrite && (
               <>
-                <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}><FileUp aria-hidden /> Import CSV</Button>
+                {canImport && <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}><FileUp aria-hidden /> Import CSV</Button>}
                 <Button size="sm" onClick={() => setCreateOpen(true)}><Plus aria-hidden /> Enrol student</Button>
               </>
             )}

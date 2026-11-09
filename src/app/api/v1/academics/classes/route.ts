@@ -34,7 +34,7 @@ export const GET = createHandler({ permission: 'academic.read' }, async ({ user,
   })), total, q)
 })
 
-export const POST = createHandler({ permission: 'academic.write', body: classCreateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'academic.classes.write', body: classCreateSchema }, async ({ user, body, audit }) => {
   const name = body.name.trim()
   if (await db.schoolClass.findFirst({ where: { schoolId: user.schoolId, name } })) {
     throw conflict(`Class "${name}" already exists`)

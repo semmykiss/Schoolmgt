@@ -71,7 +71,7 @@ export const GET = createHandler({ permission: 'hr.read' }, async ({ user, query
  * POST /hr/employees — onboard a staff member. Staff codes are auto-assigned
  * (STF-0001…) continuing the school's numbering.
  */
-export const POST = createHandler({ permission: 'hr.write', body: employeeCreateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'hr.employees.write', body: employeeCreateSchema }, async ({ user, body, audit }) => {
   const existing = await db.employee.findMany({
     where: { schoolId: user.schoolId, staffCode: { startsWith: 'STF-' } },
     select: { staffCode: true },

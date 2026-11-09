@@ -4,7 +4,7 @@ import { conflict, notFound } from '@/lib/api/errors'
 import { requireId } from '@/lib/api/paginate'
 import { termUpdateSchema } from '@/lib/validation/academic'
 
-export const PATCH = createHandler({ permission: 'academic.write', body: termUpdateSchema }, async ({ user, params, body, audit }) => {
+export const PATCH = createHandler({ permission: 'academic.sessions.write', body: termUpdateSchema }, async ({ user, params, body, audit }) => {
   const id = requireId(params.id, 'Term')
   const term = await db.term.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!term) throw notFound('Term not found')
@@ -36,7 +36,7 @@ export const PATCH = createHandler({ permission: 'academic.write', body: termUpd
   return { id: updated.id }
 })
 
-export const DELETE = createHandler({ permission: 'academic.write' }, async ({ user, params, audit }) => {
+export const DELETE = createHandler({ permission: 'academic.sessions.write' }, async ({ user, params, audit }) => {
   const id = requireId(params.id, 'Term')
   const term = await db.term.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!term) throw notFound('Term not found')

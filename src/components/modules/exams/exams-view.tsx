@@ -24,6 +24,8 @@ const TAB_ITEMS = [
 
 export function ExamsView() {
   const canWrite = useSession(s => s.can('exams.write'))
+  const canSetup = useSession(s => s.can('exams.setup'))
+  const canReports = useSession(s => s.can('exams.reportcards.write'))
   const canMark = useSession(s => s.can('exams.marks'))
   const [tab, setTab] = useState('exams')
   // Carry the broadsheet selection over to the report cards tab
@@ -64,10 +66,10 @@ export function ExamsView() {
           <BroadsheetTab canWrite={canWrite} onGoMarks={() => setTab('marks')} onGoReports={(examId, classId) => { setReportsSeed({ examId, classId }); setTab('report-cards') }} />
         </TabsContent>
         <TabsContent value="report-cards" className="mt-4">
-          <ReportCardsTab canWrite={canWrite} seed={reportsSeed} />
+          <ReportCardsTab canWrite={canReports} seed={reportsSeed} />
         </TabsContent>
         <TabsContent value="setup" className="mt-4">
-          <SetupTab canWrite={canWrite} />
+          <SetupTab canWrite={canSetup} />
         </TabsContent>
       </Tabs>
     </motion.div>

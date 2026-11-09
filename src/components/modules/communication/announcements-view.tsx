@@ -168,7 +168,8 @@ function AnnouncementDialog({ open, onOpenChange, editing }: {
 // ── Main view ───────────────────────────────────────────────────────────────
 export function AnnouncementsView() {
   const qc = useQueryClient()
-  const canWrite = useSession(s => s.can('communication.write'))
+  const canWrite = useSession(s => s.can('communication.announcements.write'))
+  const canPublish = useSession(s => s.can('communication.announcements.publish'))
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<AnnouncementRow | null>(null)
@@ -269,25 +270,29 @@ export function AnnouncementsView() {
       meta: { label: 'Actions' },
       cell: ({ row }) => {
         const a = row.original
-        if (!canWrite) return null
+        if (!canWrite && !canPublish) return null
         return (
           <div className="flex items-center gap-1">
             {a.publishedAt ? (
-              <Button
-                variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs"
-                aria-label={`Unpublish ${a.title}`}
-                onClick={() => unpublish.mutate(a)}
-              >
-                <Undo2 className="h-3.5 w-3.5" aria-hidden /> Unpublish
-              </Button>
+              canPublish && (
+                <Button
+                  variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs"
+                  aria-label={`Unpublish ${a.title}`}
+                  onClick={() => unpublish.mutate(a)}
+                >
+                  <Undo2 className="h-3.5 w-3.5" aria-hidden /> Unpublish
+                </Button>
+              )
             ) : (
-              <Button
-                variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs text-primary hover:text-primary"
-                aria-label={`Publish ${a.title}`}
-                onClick={() => setPublishTarget(a)}
-              >
-                <Rocket className="h-3.5 w-3.5" aria-hidden /> Publish
-              </Button>
+              canPublish && (
+                <Button
+                  variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs text-primary hover:text-primary"
+                  aria-label={`Publish ${a.title}`}
+                  onClick={() => setPublishTarget(a)}
+                >
+                  <Rocket className="h-3.5 w-3.5" aria-hidden /> Publish
+                </Button>
+              )
             )}
             <Button
               variant="ghost" size="icon" className="h-8 w-8"
@@ -314,7 +319,7 @@ export function AnnouncementsView() {
         )
       },
     },
-  ], [canWrite, publish, unpublish, togglePin])
+  ], [canWrite, canPublish, publish, unpublish, togglePin])
 
   return (
     <motion.div

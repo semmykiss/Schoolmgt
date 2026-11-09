@@ -4,5 +4,5 @@ import { createHandler } from '@/lib/api/handler'
 import { sendSchema } from '@/lib/validation/communication'
 import { estimateRecipients } from '@/lib/api/broadcast'
 
-export const POST = createHandler({ permission: 'communication.write', body: sendSchema }, async ({ user, body }) =>
+export const POST = createHandler({ permission: 'communication.send', body: sendSchema }, async ({ user, body }) =>
   estimateRecipients(user.schoolId, body.channel, body.audience))

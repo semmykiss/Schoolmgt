@@ -6,7 +6,7 @@ import { gradingScaleUpdateSchema } from '@/lib/validation/exams'
 
 const getId = (p: Record<string, string>) => requireId(p.id, 'Grading scale')
 
-export const PATCH = createHandler({ permission: 'exams.write', body: gradingScaleUpdateSchema }, async ({ user, params, body, audit }) => {
+export const PATCH = createHandler({ permission: 'exams.setup', body: gradingScaleUpdateSchema }, async ({ user, params, body, audit }) => {
   const id = getId(params as Record<string, string>)
   const existing = await db.gradingScale.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!existing) throw notFound('Grading scale not found')
@@ -40,7 +40,7 @@ export const PATCH = createHandler({ permission: 'exams.write', body: gradingSca
   return updated
 })
 
-export const DELETE = createHandler({ permission: 'exams.write' }, async ({ user, params, audit }) => {
+export const DELETE = createHandler({ permission: 'exams.setup' }, async ({ user, params, audit }) => {
   const id = getId(params as Record<string, string>)
   const existing = await db.gradingScale.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!existing) throw notFound('Grading scale not found')

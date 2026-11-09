@@ -58,6 +58,7 @@ interface ChildSummary {
   fees: { dueKobo: number; unpaidCount: number; overdueCount: number; nextDueDate: string | null }
   homework: { submitted: number; dueSoon: number; overdue: number; items: HomeworkItem[] }
   timetableToday: { period: string; startTime: string; endTime: string; subject: string | null; teacher: string | null; isBreak: boolean }[]
+  events: { id: string; title: string; description: string | null; type: string; startDate: string; endDate: string }[]
   announcements: { id: string; title: string; body: string; publishedAt: string | null; pinned: boolean }[]
 }
 interface PortalOverview {
@@ -297,6 +298,67 @@ function TimetableCard({ child }: { child: ChildSummary }) {
               </div>
             </li>
           ))}
+        </ul>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ── Upcoming school events ──────────────────────────────────────────────
+const EVENT_BADGE: Record<string, { label: string; className: string }> = {
+  EXAM: { label: 'Exam', className: 'bg-rose-500/10 text-rose-600 dark:text-rose-400' },
+  HOLIDAY: { label: 'Holiday', className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
+  MEETING: { label: 'Meeting', className: 'bg-primary/10 text-primary' },
+  ACTIVITY: { label: 'Activity', className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400' },
+  OTHER: { label: 'Event', className: 'bg-muted text-muted-foreground' },
+}
+
+function EventsCard({ child }: { child: ChildSummary }) {
+  const events = child.events ?? []
+  if (events.length === 0) return null
+  const today = isoToday()
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between space-y-0">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+          </span>
+          School calendar
+        </CardTitle>
+        <span className="text-xs text-muted-foreground">Upcoming</span>
+      </CardHeader>
+      <CardContent className="px-3 pb-3 sm:px-4 sm:pb-4">
+        <ul className="max-h-80 divide-y overflow-y-auto rounded-lg border">
+          {events.map(e => {
+            const meta = EVENT_BADGE[e.type] ?? EVENT_BADGE.OTHER
+            const d = new Date(`${e.startDate}T00:00:00`)
+            const ongoing = e.startDate <= today && e.endDate >= today
+            const multiDay = e.endDate !== e.startDate
+            return (
+              <li key={e.id} className="flex items-center gap-3 px-3 py-2.5 sm:px-4">
+                <span className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg border bg-muted/40 leading-none">
+                  <span className="text-[10px] font-medium uppercase text-muted-foreground">
+                    {d.toLocaleDateString('en-NG', { month: 'short' })}
+                  </span>
+                  <span className="text-sm font-semibold">{d.getDate()}</span>
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p className="truncate text-sm font-medium">{e.title}</p>
+                    <Badge variant="secondary" className={cn('text-[10px]', meta.className)}>{meta.label}</Badge>
+                    {ongoing && <Badge variant="secondary" className="bg-emerald-500/10 text-[10px] text-emerald-600 dark:text-emerald-400">Happening now</Badge>}
+                  </div>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {multiDay
+                      ? `${prettyDate(e.startDate)} → ${prettyDate(e.endDate)}`
+                      : d.toLocaleDateString('en-NG', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    {e.description ? ` · ${e.description}` : ''}
+                  </p>
+                </div>
+              </li>
+            )
+          })}
         </ul>
       </CardContent>
     </Card>
@@ -591,6 +653,8 @@ export function PortalHome() {
               canSubmit
               onSubmit={item => setSubmitItem(item)}
             />
+
+            <EventsCard child={child} />
 
             <div className="grid gap-6 lg:grid-cols-2">
               <TimetableCard child={child} />

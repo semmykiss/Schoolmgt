@@ -35,7 +35,7 @@ export const GET = createHandler({ permission: 'hr.read' }, async ({ user, param
 })
 
 /** PATCH /hr/employees/:id — update profile/employment fields. */
-export const PATCH = createHandler({ permission: 'hr.write', body: employeeUpdateSchema }, async ({ user, params, body, audit }) => {
+export const PATCH = createHandler({ permission: 'hr.employees.write', body: employeeUpdateSchema }, async ({ user, params, body, audit }) => {
   const employee = await db.employee.findFirst({ where: { id: params.id, schoolId: user.schoolId } })
   if (!employee) throw notFound('Staff member not found')
 
@@ -72,7 +72,7 @@ export const PATCH = createHandler({ permission: 'hr.write', body: employeeUpdat
  * leave records and timetable links must survive, so the record is marked
  * LEFT rather than destroyed.
  */
-export const DELETE = createHandler({ permission: 'hr.write' }, async ({ user, params, audit }) => {
+export const DELETE = createHandler({ permission: 'hr.employees.write' }, async ({ user, params, audit }) => {
   const employee = await db.employee.findFirst({ where: { id: params.id, schoolId: user.schoolId } })
   if (!employee) throw notFound('Staff member not found')
 

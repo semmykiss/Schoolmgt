@@ -38,7 +38,7 @@ export const GET = createHandler({ permission: 'fees.read' }, async ({ user, par
   }
 })
 
-export const PATCH = createHandler({ permission: 'fees.write', body: invoiceUpdateSchema }, async ({ user, params, body, audit }) => {
+export const PATCH = createHandler({ permission: 'fees.invoices.write', body: invoiceUpdateSchema }, async ({ user, params, body, audit }) => {
   const id = params.id
   const existing = await db.feeInvoice.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!existing) throw notFound('Invoice not found')
@@ -75,7 +75,7 @@ export const PATCH = createHandler({ permission: 'fees.write', body: invoiceUpda
 })
 
 /** Void an invoice (soft state change so payment history stays intact). */
-export const DELETE = createHandler({ permission: 'fees.write' }, async ({ user, params, audit }) => {
+export const DELETE = createHandler({ permission: 'fees.invoices.write' }, async ({ user, params, audit }) => {
   const id = params.id
   const existing = await db.feeInvoice.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!existing) throw notFound('Invoice not found')

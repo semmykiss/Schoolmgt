@@ -1,11 +1,25 @@
 import { db } from '@/lib/db'
 import { createHandler } from '@/lib/api/handler'
 import { notFound } from '@/lib/api/errors'
+import { can } from '@/lib/auth/permissions'
+import { employeeOfUser } from '@/lib/api/portal'
 
-/** GET /hr/payslips/:id — single payslip with employee detail + parsed breakdown items. */
-export const GET = createHandler({ permission: 'hr.read' }, async ({ user, params }) => {
+/**
+ * GET /hr/payslips/:id — single payslip with employee detail + parsed breakdown
+ * items. HR/payroll staff see any slip in their school; a staff member without
+ * `hr.read` may only open their OWN payslips (self-service).
+ */
+export const GET = createHandler({}, async ({ user, params }) => {
+  const manager = can(user.permissions, 'hr.read')
+  let employeeId: string | undefined
+  if (!manager) {
+    const self = await employeeOfUser(user.schoolId, user.id)
+    if (!self) throw notFound('Payslip not found')
+    employeeId = self.id
+  }
+
   const payslip = await db.payslip.findFirst({
-    where: { id: params.id, schoolId: user.schoolId },
+    where: { id: params.id, schoolId: user.schoolId, ...(employeeId ? { employeeId } : {}) },
     include: {
       employee: {
         select: {

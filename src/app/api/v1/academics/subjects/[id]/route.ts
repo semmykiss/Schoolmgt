@@ -4,7 +4,7 @@ import { conflict, notFound } from '@/lib/api/errors'
 import { requireId } from '@/lib/api/paginate'
 import { subjectUpdateSchema } from '@/lib/validation/academic'
 
-export const PATCH = createHandler({ permission: 'academic.write', body: subjectUpdateSchema }, async ({ user, params, body, audit }) => {
+export const PATCH = createHandler({ permission: 'academic.subjects.write', body: subjectUpdateSchema }, async ({ user, params, body, audit }) => {
   const id = requireId(params.id, 'Subject')
   const subject = await db.subject.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!subject) throw notFound('Subject not found')
@@ -27,7 +27,7 @@ export const PATCH = createHandler({ permission: 'academic.write', body: subject
   return { id: updated.id }
 })
 
-export const DELETE = createHandler({ permission: 'academic.write' }, async ({ user, params, audit }) => {
+export const DELETE = createHandler({ permission: 'academic.subjects.write' }, async ({ user, params, audit }) => {
   const id = requireId(params.id, 'Subject')
   const subject = await db.subject.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!subject) throw notFound('Subject not found')

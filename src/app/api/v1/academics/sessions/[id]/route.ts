@@ -4,7 +4,7 @@ import { conflict, notFound } from '@/lib/api/errors'
 import { requireId } from '@/lib/api/paginate'
 import { sessionUpdateSchema } from '@/lib/validation/academic'
 
-export const PATCH = createHandler({ permission: 'academic.write', body: sessionUpdateSchema }, async ({ user, params, body, audit }) => {
+export const PATCH = createHandler({ permission: 'academic.sessions.write', body: sessionUpdateSchema }, async ({ user, params, body, audit }) => {
   const id = requireId(params.id, 'Session')
   const session = await db.academicSession.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!session) throw notFound('Session not found')
@@ -34,7 +34,7 @@ export const PATCH = createHandler({ permission: 'academic.write', body: session
   return { id: updated.id }
 })
 
-export const DELETE = createHandler({ permission: 'academic.write' }, async ({ user, params, audit }) => {
+export const DELETE = createHandler({ permission: 'academic.sessions.write' }, async ({ user, params, audit }) => {
   const id = requireId(params.id, 'Session')
   const session = await db.academicSession.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!session) throw notFound('Session not found')

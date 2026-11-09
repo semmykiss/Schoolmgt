@@ -18,6 +18,7 @@ const TAB_ITEMS = [
 
 export function AttendanceView() {
   const canWrite = useSession(s => s.can('attendance.write'))
+  const canStaff = useSession(s => s.can('attendance.staff.write'))
   const [tab, setTab] = useState('mark')
 
   return (
@@ -52,7 +53,7 @@ export function AttendanceView() {
           <SummaryTab />
         </TabsContent>
         <TabsContent value="staff" className="mt-4">
-          <StaffTab canWrite={canWrite} />
+          <StaffTab canWrite={canStaff} />
         </TabsContent>
       </Tabs>
     </motion.div>

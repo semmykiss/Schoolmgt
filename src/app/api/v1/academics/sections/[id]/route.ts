@@ -4,7 +4,7 @@ import { conflict, notFound } from '@/lib/api/errors'
 import { requireId } from '@/lib/api/paginate'
 import { sectionUpdateSchema } from '@/lib/validation/academic'
 
-export const PATCH = createHandler({ permission: 'academic.write', body: sectionUpdateSchema }, async ({ user, params, body, audit }) => {
+export const PATCH = createHandler({ permission: 'academic.classes.write', body: sectionUpdateSchema }, async ({ user, params, body, audit }) => {
   const id = requireId(params.id, 'Section')
   const section = await db.section.findFirst({ where: { id, schoolId: user.schoolId }, include: { class: true } })
   if (!section) throw notFound('Section not found')
@@ -38,7 +38,7 @@ export const PATCH = createHandler({ permission: 'academic.write', body: section
   return { ok: true }
 })
 
-export const DELETE = createHandler({ permission: 'academic.write' }, async ({ user, params, audit }) => {
+export const DELETE = createHandler({ permission: 'academic.classes.write' }, async ({ user, params, audit }) => {
   const id = requireId(params.id, 'Section')
   const section = await db.section.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!section) throw notFound('Section not found')

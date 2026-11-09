@@ -144,7 +144,7 @@ export const POST = createHandler(
  * PATCH — teacher/admin grades a submission (score → status GRADED; parent/student notified).
  */
 export const PATCH = createHandler(
-  { permission: 'assignments.write', body: submissionGradeSchema },
+  { permission: 'assignments.grade', body: submissionGradeSchema },
   async ({ user, params, body, audit }) => {
     const assignment = await getOwnedAssignment(user.schoolId, params.id)
     await assertAssignmentManageable(user, assignment)

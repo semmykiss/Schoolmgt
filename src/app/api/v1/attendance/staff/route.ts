@@ -40,7 +40,7 @@ export const GET = createHandler({ permission: 'attendance.read' }, async ({ use
   }
 })
 
-export const POST = createHandler({ permission: 'attendance.write', body: staffAttendanceSaveSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'attendance.staff.write', body: staffAttendanceSaveSchema }, async ({ user, body, audit }) => {
   const employeeIds = body.records.map(r => r.employeeId)
   const employees = await db.employee.findMany({
     where: { id: { in: employeeIds }, schoolId: user.schoolId },

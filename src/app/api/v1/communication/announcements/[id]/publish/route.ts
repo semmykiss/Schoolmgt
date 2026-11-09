@@ -5,7 +5,7 @@ import { createHandler } from '@/lib/api/handler'
 import { notFound } from '@/lib/api/errors'
 import { resolveAudienceUsers } from '@/lib/api/audience'
 
-export const POST = createHandler({ permission: 'communication.write' }, async ({ user, params, audit }) => {
+export const POST = createHandler({ permission: 'communication.announcements.publish' }, async ({ user, params, audit }) => {
   const announcement = await db.announcement.findFirst({
     where: { id: params.id, schoolId: user.schoolId },
     include: { class: { select: { id: true, name: true } } },

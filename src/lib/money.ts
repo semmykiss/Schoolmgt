@@ -31,3 +31,47 @@ export function parseMoneyInput(input: string): number {
   const n = Number(cleaned)
   return Number.isFinite(n) ? Math.round(n * 100) : NaN
 }
+
+// ── Amount in words (Nigerian payslip convention) ───────────────────────────
+
+const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+  'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen']
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety']
+
+function under1000(n: number): string {
+  if (n === 0) return ''
+  if (n < 20) return ONES[n]
+  if (n < 100) return TENS[Math.floor(n / 10)] + (n % 10 ? `-${ONES[n % 10]}` : '')
+  return `${ONES[Math.floor(n / 100)]} hundred${n % 100 ? ` ${under1000(n % 100)}` : ''}`
+}
+
+/** "15325000" (kobo) → "One Hundred And Fifty-Three Thousand, Two Hundred And Fifty Naira Only" */
+export function nairaInWords(kobo: number): string {
+  const naira = Math.floor(Math.abs(kobo) / 100)
+  const cents = Math.abs(kobo) % 100
+  if (naira === 0 && cents === 0) return 'Zero Naira Only'
+
+  const chunk = (n: number): string => {
+    if (n === 0) return ''
+    if (n < 1000) return under1000(n)
+    const units: { value: number; label: string }[] = [
+      { value: 1_000_000_000, label: 'billion' },
+      { value: 1_000_000, label: 'million' },
+      { value: 1_000, label: 'thousand' },
+    ]
+    for (const u of units) {
+      if (n >= u.value) {
+        const head = `${chunk(Math.floor(n / u.value))} ${u.label}`
+        const rest = n % u.value
+        return rest ? `${head}, ${chunk(rest)}` : head
+      }
+    }
+    return ''
+  }
+
+  const words: string[] = []
+  if (naira > 0) words.push(`${chunk(naira)} naira`)
+  if (cents > 0) words.push(`${under1000(cents)} kobo`)
+  const joined = words.join(' and ')
+  return `${joined.charAt(0).toUpperCase()}${joined.slice(1)} only`.replace(/ naira only$/, ' naira only')
+}

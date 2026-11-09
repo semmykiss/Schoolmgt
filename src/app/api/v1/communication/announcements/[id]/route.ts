@@ -15,7 +15,7 @@ async function getAnnouncement(schoolId: string, id: string) {
 export const GET = createHandler({ permission: 'communication.read' }, async ({ user, params }) =>
   getAnnouncement(user.schoolId, params.id))
 
-export const PATCH = createHandler({ permission: 'communication.write', body: announcementUpdateSchema }, async ({ user, params, body, audit }) => {
+export const PATCH = createHandler({ permission: 'communication.announcements.write', body: announcementUpdateSchema }, async ({ user, params, body, audit }) => {
   const announcement = await getAnnouncement(user.schoolId, params.id)
 
   if (body.audience === 'CLASS') {
@@ -54,7 +54,7 @@ export const PATCH = createHandler({ permission: 'communication.write', body: an
   return updated
 })
 
-export const DELETE = createHandler({ permission: 'communication.write' }, async ({ user, params, audit }) => {
+export const DELETE = createHandler({ permission: 'communication.announcements.write' }, async ({ user, params, audit }) => {
   const announcement = await getAnnouncement(user.schoolId, params.id)
   await db.announcement.delete({ where: { id: announcement.id } })
   audit({ action: 'delete', entity: 'Announcement', entityId: announcement.id, summary: `Deleted announcement "${announcement.title}"` })

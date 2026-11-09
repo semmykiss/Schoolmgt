@@ -4,7 +4,7 @@ import { notFound, badRequest } from '@/lib/api/errors'
 import { balanceOf, computeStatus } from '@/lib/domain/fees'
 
 /** Reverse a mistaken payment — restores the invoice balance and removes the linked ledger entry. */
-export const DELETE = createHandler({ permission: 'fees.write' }, async ({ user, params, audit }) => {
+export const DELETE = createHandler({ permission: 'fees.payments.write' }, async ({ user, params, audit }) => {
   const { id: invoiceId, paymentId } = params
   const invoice = await db.feeInvoice.findFirst({ where: { id: invoiceId, schoolId: user.schoolId } })
   if (!invoice) throw notFound('Invoice not found')

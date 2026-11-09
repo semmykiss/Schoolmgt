@@ -19,7 +19,10 @@ const TAB_ITEMS = [
 ]
 
 export function FeesView() {
-  const canWrite = useSession(s => s.can('fees.write'))
+  const canInvoices = useSession(s => s.can('fees.invoices.write'))
+  const canStructures = useSession(s => s.can('fees.structures.write'))
+  const canDiscounts = useSession(s => s.can('fees.discounts.write'))
+  const canPay = useSession(s => s.can('fees.payments.write'))
   const [tab, setTab] = useState('overview')
 
   return (
@@ -51,13 +54,13 @@ export function FeesView() {
           <FeesOverviewTab onOpenInvoices={() => setTab('invoices')} />
         </TabsContent>
         <TabsContent value="invoices" className="mt-4">
-          <InvoicesTab canWrite={canWrite} />
+          <InvoicesTab canWrite={canInvoices} canPay={canPay} />
         </TabsContent>
         <TabsContent value="structures" className="mt-4">
-          <StructuresTab canWrite={canWrite} />
+          <StructuresTab canWrite={canStructures} />
         </TabsContent>
         <TabsContent value="discounts" className="mt-4">
-          <DiscountsTab canWrite={canWrite} />
+          <DiscountsTab canWrite={canDiscounts} />
         </TabsContent>
       </Tabs>
     </motion.div>

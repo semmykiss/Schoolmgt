@@ -234,7 +234,14 @@ async function main() {
     await db.payslip.create({ data: {
       schoolId: school.id, employeeId: emp.id, period: `${nowD.getFullYear()}-${pad(nowD.getMonth() + 1, 2)}`,
       grossAmount: naira(gross), totalDeductions: naira(pension + tax), netAmount: naira(net),
-      items: '[]', status: 'DRAFT',
+      items: JSON.stringify([
+        { label: 'Basic Salary', amount: naira(basic), type: 'EARNING' },
+        { label: 'Housing', amount: naira(housing), type: 'EARNING' },
+        { label: 'Transport', amount: naira(transport), type: 'EARNING' },
+        { label: 'Pension (8%)', amount: naira(pension), type: 'DEDUCTION' },
+        { label: 'PAYE Tax', amount: naira(tax), type: 'DEDUCTION' },
+      ]),
+      status: 'DRAFT',
     } })
   }
   await db.leaveRequest.create({ data: {
@@ -769,6 +776,7 @@ async function main() {
     { schoolId: school.id, title: 'Mid-Term Break', type: 'HOLIDAY', startDate: iso(addDays(new Date(), 10)), endDate: iso(addDays(new Date(), 12)), audience: 'ALL', createdById: admin.id },
     { schoolId: school.id, title: 'Open Day', type: 'ACTIVITY', startDate: iso(addDays(new Date(), 17)), endDate: iso(addDays(new Date(), 17)), audience: 'ALL', createdById: admin.id },
     { schoolId: school.id, title: 'Mid-Term Test Week', type: 'EXAM', startDate: iso(addDays(new Date(), 3)), endDate: iso(addDays(new Date(), 7)), audience: 'ALL', createdById: principalUser.id },
+    { schoolId: school.id, title: 'PTA Meeting', type: 'MEETING', startDate: iso(addDays(new Date(), 14)), endDate: iso(addDays(new Date(), 14)), audience: 'PARENTS', createdById: principalUser.id },
   ] })
   await db.messageTemplate.createMany({ data: [
     { schoolId: school.id, name: 'Fee Reminder', channel: 'SMS', body: 'Dear {{parent}}, a reminder that {{student}}\'s outstanding fee is {{amount}}, due {{date}}. Pay via transfer or the portal. — ' + SCHOOL_SHORT },

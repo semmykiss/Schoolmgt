@@ -9,7 +9,7 @@ import { computePayslip, periodLabel } from '@/lib/domain/hr'
  * every ACTIVE employee's active salary structure. Employees already having a
  * payslip for the period are skipped (idempotent re-runs are safe).
  */
-export const POST = createHandler({ permission: 'hr.write', body: payslipGenerateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'hr.payroll.write', body: payslipGenerateSchema }, async ({ user, body, audit }) => {
   const { period } = body
 
   const employees = await db.employee.findMany({

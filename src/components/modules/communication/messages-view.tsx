@@ -407,7 +407,7 @@ function TemplateDialog({ open, onOpenChange, editing }: {
 }
 
 function TemplatesTab() {
-  const canWrite = useSession(s => s.can('communication.write'))
+  const canWrite = useSession(s => s.can('communication.templates.write'))
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<TemplateRow | null>(null)
   const [removeTarget, setRemoveTarget] = useState<TemplateRow | null>(null)
@@ -623,7 +623,7 @@ function LogsTab() {
 
 // ── Main view ───────────────────────────────────────────────────────────────
 export function MessagesView() {
-  const canWrite = useSession(s => s.can('communication.write'))
+  const canWrite = useSession(s => s.can('communication.send'))
   const [tab, setTab] = useState('compose')
 
   return (

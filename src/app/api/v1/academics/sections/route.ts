@@ -3,7 +3,7 @@ import { createHandler } from '@/lib/api/handler'
 import { conflict, notFound } from '@/lib/api/errors'
 import { sectionCreateSchema } from '@/lib/validation/academic'
 
-export const POST = createHandler({ permission: 'academic.write', body: sectionCreateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'academic.classes.write', body: sectionCreateSchema }, async ({ user, body, audit }) => {
   const schoolClass = await db.schoolClass.findFirst({ where: { id: body.classId, schoolId: user.schoolId } })
   if (!schoolClass) throw notFound('Class not found')
   const name = body.name.trim()

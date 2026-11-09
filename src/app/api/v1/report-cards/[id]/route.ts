@@ -6,7 +6,7 @@ import { reportCardUpdateSchema } from '@/lib/validation/exams'
 
 const getId = (p: Record<string, string>) => requireId(p.id, 'Report card')
 
-export const PATCH = createHandler({ permission: 'exams.write', body: reportCardUpdateSchema }, async ({ user, params, body, audit }) => {
+export const PATCH = createHandler({ permission: 'exams.reportcards.write', body: reportCardUpdateSchema }, async ({ user, params, body, audit }) => {
   const id = getId(params as Record<string, string>)
   const existing = await db.reportCard.findFirst({
     where: { id, schoolId: user.schoolId },

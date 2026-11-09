@@ -35,7 +35,7 @@ export const POST = createHandler({ permission: 'hr.leave.write', body: leaveDec
         title: `Leave request ${body.decision === 'APPROVED' ? 'approved' : 'rejected'}`,
         body: `${LEAVE_TYPE_LABEL[request.type]} ${request.startDate} → ${request.endDate}${body.note ? ` — ${body.note}` : ''}`,
         type: 'LEAVE',
-        link: '#/dashboard',
+        link: '#/self-service',
       },
     })
   }

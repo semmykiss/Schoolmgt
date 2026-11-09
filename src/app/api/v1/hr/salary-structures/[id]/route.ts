@@ -4,7 +4,7 @@ import { notFound } from '@/lib/api/errors'
 import { salaryStructureUpdateSchema } from '@/lib/validation/hr'
 
 /** PATCH /hr/salary-structures/:id — edit or activate/deactivate (activating demotes siblings). */
-export const PATCH = createHandler({ permission: 'hr.write', body: salaryStructureUpdateSchema }, async ({ user, params, body, audit }) => {
+export const PATCH = createHandler({ permission: 'hr.salaries.write', body: salaryStructureUpdateSchema }, async ({ user, params, body, audit }) => {
   const structure = await db.salaryStructure.findFirst({
     where: { id: params.id, schoolId: user.schoolId },
     include: { employee: { select: { firstName: true, lastName: true } } },
@@ -41,7 +41,7 @@ export const PATCH = createHandler({ permission: 'hr.write', body: salaryStructu
 })
 
 /** DELETE /hr/salary-structures/:id — payslips already generated keep their snapshot. */
-export const DELETE = createHandler({ permission: 'hr.write' }, async ({ user, params, audit }) => {
+export const DELETE = createHandler({ permission: 'hr.salaries.write' }, async ({ user, params, audit }) => {
   const structure = await db.salaryStructure.findFirst({
     where: { id: params.id, schoolId: user.schoolId },
     include: { employee: { select: { firstName: true, lastName: true } } },

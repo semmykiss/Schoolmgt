@@ -5,6 +5,7 @@ import { parseListQuery, paginated } from '@/lib/api/paginate'
 import { invoiceCreateSchema } from '@/lib/validation/fees'
 import { subtotalOf, totalOf, computeStatus } from '@/lib/domain/fees'
 import { extractSeq } from '@/lib/domain/numbering'
+import { notifyUsers, studentCircleUserIds } from '@/lib/api/notify'
 
 export const GET = createHandler({ permission: 'fees.read' }, async ({ user, query }) => {
   const q = parseListQuery(query, { pageSize: 25 })
@@ -44,9 +45,16 @@ export const GET = createHandler({ permission: 'fees.read' }, async ({ user, que
   return { ...paginated(items, total, q), counts: Object.fromEntries(counts.map(c => [c.status, c._count._all])) }
 })
 
-export const POST = createHandler({ permission: 'fees.write', body: invoiceCreateSchema }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'fees.invoices.write', body: invoiceCreateSchema }, async ({ user, body, audit }) => {
   const [student, term] = await Promise.all([
-    db.student.findFirst({ where: { id: body.studentId, schoolId: user.schoolId }, select: { id: true, firstName: true, lastName: true } }),
+    db.student.findFirst({
+      where: { id: body.studentId, schoolId: user.schoolId },
+      select: {
+        id: true, firstName: true, lastName: true,
+        userId: true,
+        guardians: { select: { guardian: { select: { userId: true } } } },
+      },
+    }),
     db.term.findFirst({ where: { id: body.termId, schoolId: user.schoolId }, select: { id: true, sessionId: true } }),
   ])
   if (!student) throw notFound('Selected student does not exist')
@@ -83,8 +91,21 @@ export const POST = createHandler({ permission: 'fees.write', body: invoiceCreat
     createdById: user.id,
   } })
   audit({ action: 'CREATE', entity: 'FeeInvoice', entityId: created.id, summary: `Raised invoice ${invoiceNumberStr} for ${student.firstName} ${student.lastName}` })
+
+  // Heads-up to the student's portal circle so nobody misses a due date.
+  await notifyUsers(user.schoolId, await studentCircleUserIds(student), {
+    title: `New invoice — ${invoiceNumberStr}`,
+    body: `${formatNairaBody(total)} due ${body.dueDate}. View details on the portal.`,
+    type: 'FEE',
+    link: '#/portal',
+  })
+
   return created
 })
+
+function formatNairaBody(kobo: number): string {
+  return `₦${(kobo / 100).toLocaleString('en-NG')}`
+}
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'

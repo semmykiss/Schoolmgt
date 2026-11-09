@@ -5,7 +5,7 @@ import { notFound } from '@/lib/api/errors'
 import { sendSchema } from '@/lib/validation/communication'
 import { runBroadcast } from '@/lib/api/broadcast'
 
-export const POST = createHandler({ permission: 'communication.write', body: sendSchema, rateLimit: { bucket: 'comm-send', limit: 20, windowMs: 60_000 } }, async ({ user, body, audit }) => {
+export const POST = createHandler({ permission: 'communication.send', body: sendSchema, rateLimit: { bucket: 'comm-send', limit: 20, windowMs: 60_000 } }, async ({ user, body, audit }) => {
   let subject = body.subject || null
   let bodyText = body.body || ''
 

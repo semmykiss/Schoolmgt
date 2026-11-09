@@ -5,7 +5,7 @@ import { requireId } from '@/lib/api/paginate'
 import { studentExitSchema } from '@/lib/validation/admissions'
 
 /** Record a transfer-out, graduation, suspension or withdrawal with exit metadata. */
-export const POST = createHandler({ permission: 'students.write', body: studentExitSchema }, async ({ user, params, body, audit }) => {
+export const POST = createHandler({ permission: 'students.exit', body: studentExitSchema }, async ({ user, params, body, audit }) => {
   const id = requireId(params.id, 'Student')
   const student = await db.student.findFirst({ where: { id, schoolId: user.schoolId } })
   if (!student) throw notFound('Student not found')
