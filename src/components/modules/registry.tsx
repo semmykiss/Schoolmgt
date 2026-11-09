@@ -19,6 +19,8 @@ import { CalendarView } from '@/components/modules/communication/calendar-view'
 import { MessagesView } from '@/components/modules/communication/messages-view'
 import { StaffView } from '@/components/modules/staff/staff-view'
 import { StaffSelfServiceView } from '@/components/modules/staff/staff-self-service'
+import { InventoryView } from '@/components/modules/inventory/inventory-view'
+import { LibraryView } from '@/components/modules/library/library-view'
 import { ComingSoon } from '@/components/shared/coming-soon'
 
 /**
@@ -64,6 +66,10 @@ export function RouterView({ segments }: { segments: string[] }) {
       return <StaffView />
     case 'self-service':
       return <StaffSelfServiceView />
+    case 'inventory':
+      return <InventoryView />
+    case 'library':
+      return <LibraryView />
     default:
       return <ComingSoon itemKey={MODULES[key] ? key : 'dashboard'} />
   }

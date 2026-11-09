@@ -925,6 +925,7 @@ model StockMovement {
   createdAt  DateTime @default(now())
 
   item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  supplier Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   @@index([schoolId, itemId, date])
 }
@@ -939,6 +940,8 @@ model Supplier {
   address     String?
   notes       String?
   createdAt   DateTime @default(now())
+
+  movements StockMovement[]
 
   @@unique([schoolId, name])
 }

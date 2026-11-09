@@ -282,6 +282,33 @@ const paths: Record<string, unknown> = {
   '/communication/send': op('post', 'Broadcast {channel, templateId?, subject?, body?, audience} — resolves contacts, renders placeholders, sends via configured driver, logs every message', 'Communication', { requestBody: jsonBody() }),
   '/communication/send/preview': op('post', 'Recipient estimate for a broadcast spec — count + 5 samples without sending', 'Communication', { requestBody: jsonBody() }),
   '/communication/logs': op('get', 'Delivery log (channel, status, search) + status counts', 'Communication'),
+
+  // ── Inventory (Phase 9) ─────────────────────────────────────────────────
+  '/inventory/items': { get: op('get', 'Stock catalogue (search, category, pagination) with low-stock flags and value stats', 'Inventory')['get'],
+    post: op('post', 'Register a stock item {name, sku?, category?, unit, reorderLevel, unitPrice?}', 'Inventory', { requestBody: jsonBody() })['post'] },
+  '/inventory/items/{id}': {
+    patch: op('patch', 'Edit item details (price, reorder level…)', 'Inventory', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete an item and its movement history', 'Inventory')['delete'],
+  },
+  '/inventory/movements': { get: op('get', 'Stock card (?itemId=, ?type=, ?from&to=)', 'Inventory')['get'],
+    post: op('post', 'Record IN / OUT / ADJUST — applied atomically; restock alerts fire when stock crosses the reorder level', 'Inventory', { requestBody: jsonBody() })['post'] },
+  '/inventory/suppliers': { get: op('get', 'Supplier directory (search)', 'Inventory')['get'],
+    post: op('post', 'Add a supplier {name, contactName?, phone?, email?, address?, notes?}', 'Inventory', { requestBody: jsonBody() })['post'] },
+  '/inventory/suppliers/{id}': {
+    patch: op('patch', 'Update a supplier', 'Inventory', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Delete a supplier', 'Inventory')['delete'],
+  },
+
+  // ── Library (Phase 9) ───────────────────────────────────────────────────
+  '/library/books': { get: op('get', 'Catalogue (search title/author/isbn, category, available=1) with copy stats', 'Library')['get'],
+    post: op('post', 'Catalogue a book {title, author?, isbn?, category?, shelf?, totalCopies}', 'Library', { requestBody: jsonBody() })['post'] },
+  '/library/books/{id}': {
+    patch: op('patch', 'Edit a book — growing totalCopies tops up availability', 'Library', { requestBody: jsonBody() })['patch'],
+    delete: op('delete', 'Remove a book (blocked while copies are still out)', 'Library')['delete'],
+  },
+  '/library/loans': { get: op('get', 'Issuing register (status, bookId, search) — lazily flags overdue loans', 'Library')['get'],
+    post: op('post', 'Issue a book to a student or staff member {bookId, borrowerType, borrowerId, dueDate}', 'Library', { requestBody: jsonBody() })['post'] },
+  '/library/loans/{id}/return': op('patch', 'Receive a book back — fine auto-computes (₦50/day, capped) unless overridden', 'Library', { requestBody: jsonBody() }),
 }
 
 export const openApiDoc = {

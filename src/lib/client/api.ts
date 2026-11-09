@@ -136,4 +136,10 @@ export const qk = {
   events: (filters?: Record<string, unknown>) => ['communication', 'events', filters ?? {}] as const,
   templates: (filters?: Record<string, unknown>) => ['communication', 'templates', filters ?? {}] as const,
   commLogs: (filters?: Record<string, unknown>) => ['communication', 'logs', filters ?? {}] as const,
+  // inventory & library (Phase 9)
+  inventoryItems: (filters?: Record<string, unknown>) => ['inventory', 'items', filters ?? {}] as const,
+  inventoryMovements: (filters?: Record<string, unknown>) => ['inventory', 'movements', filters ?? {}] as const,
+  suppliers: (filters?: Record<string, unknown>) => ['inventory', 'suppliers', filters ?? {}] as const,
+  books: (filters?: Record<string, unknown>) => ['library', 'books', filters ?? {}] as const,
+  loans: (filters?: Record<string, unknown>) => ['library', 'loans', filters ?? {}] as const,
 }

@@ -197,19 +197,19 @@ GET  /openapi.json                      OpenAPI 3.1 document (rendered by SPA "A
 
 ## 3. Build phases (each ends with lint + browser verification + summary)
 
-| # | Phase | Contents |
-|---|---|---|
-| 0 | Foundation | deps (jose, @node-rs/argon2), db push, seed (Nigerian demo school), auth + RBAC + audit + rate-limit, API handler middleware, app shell (sidebar/topbar/themes), shared DataTable/drawer/empty-state kit, dashboard skeleton, OpenAPI doc |
-| 1 | Academic structure | sessions/terms/classes/sections/subjects/class-subjects/lesson plans/promotions |
-| 2 | Admissions + students | public apply form, pipeline, convert, students CRUD, guardians, CSV import/export, ID card |
-| 3 | Timetable + attendance | periods, slots + clash detection, class/teacher views, daily & per-period attendance, staff attendance, monthly reports, parent alerts |
-| 4 | Fees & accounts | structures, invoices (bulk + instalments + discounts), payments + receipts, online payment adapter, defaulters, ledger, accounts summary |
-| 5 | Exams & report cards | exam types, schedules, grading scales, marks entry, broadsheet/positions, branded report card print, publish |
-| 6 | Portals + assignments | parent/student logins & views; homework posting/viewing |
-| 7 | Communication | announcements, events, templates, messaging adapters, notification centre |
-| 8 | HR & payroll | employees, salary structures, payslips, leaves, staff portal access |
-| 9 | Inventory & library | items, stock movements, suppliers, books, loans |
-| 10 | Reports + admin + polish | analytics, saved filters, scheduled exports, roles matrix, audit log UI, branding, backups, i18n stubs, README, docker-compose |
+| # | Phase | Contents | Status |
+|---|---|---|---|
+| 0 | Foundation | deps (jose, @node-rs/argon2), db push, seed (Nigerian demo school), auth + RBAC + audit + rate-limit, API handler middleware, app shell (sidebar/topbar/themes), shared DataTable/drawer/empty-state kit, dashboard skeleton, OpenAPI doc | ✅ |
+| 1 | Academic structure | sessions/terms/classes/sections/subjects/class-subjects/lesson plans/promotions | ✅ |
+| 2 | Admissions + students | public apply form, pipeline, convert, students CRUD, guardians, CSV import/export, ID card | ✅ |
+| 3 | Timetable + attendance | periods, slots + clash detection, class/teacher views, daily & per-period attendance, staff attendance, monthly reports, parent alerts | ✅ |
+| 4 | Fees & accounts | structures, invoices (bulk + instalments + discounts), payments + receipts, online payment adapter, defaulters, ledger, accounts summary | ✅ |
+| 5 | Exams & report cards | exam types, schedules, grading scales, marks entry, broadsheet/positions, branded report card print, publish | ✅ |
+| 6 | Portals + assignments | parent/student logins & views; homework posting/viewing | ✅ |
+| 7 | Communication | announcements, events, templates, messaging adapters, notification centre | ✅ |
+| 8 | HR & payroll | employees, salary structures, payslips (full breakdown), leaves (self-service), staff portal access | ✅ |
+| 9 | Inventory & library | items, stock movements (restock alerts), suppliers, books, loans (auto fines) | ✅ |
+| 10 | Reports + admin + polish | analytics, saved filters, scheduled exports, roles matrix (✅ done in phase 9 wave), audit log UI, branding, backups, i18n stubs, README, docker-compose | ⏳ |
 
 ## 4. Seed data (Nigerian context, configurable via env)
 
