@@ -2,7 +2,7 @@ import { db } from '@/lib/db'
 import { createHandler } from '@/lib/api/handler'
 import { notFound, badRequest } from '@/lib/api/errors'
 import { requireId } from '@/lib/api/paginate'
-import { rankPositions, remarkForAverage, remarkForPrincipal } from '@/lib/domain/grading'
+import { rankPositions, averagePct, remarkForAverage, remarkForPrincipal } from '@/lib/domain/grading'
 import { reportCardGenerateSchema } from '@/lib/validation/exams'
 
 /**
@@ -120,17 +120,18 @@ export const POST = createHandler({ permission: 'exams.write', body: reportCardG
 
   const results = await db.examResult.findMany({
     where: { schoolId: user.schoolId, examId, classSubject: { classId } },
-    select: { studentId: true, marksObtained: true },
+    select: { studentId: true, marksObtained: true, maxMarks: true },
   })
   if (results.length === 0) {
     throw badRequest('No scores entered for this class yet — enter marks first, then generate report cards.')
   }
 
-  const totals = new Map<string, { total: number; count: number }>()
+  const totals = new Map<string, { total: number; count: number; pcts: { marksObtained: number; maxMarks: number }[] }>()
   for (const r of results) {
-    const t = totals.get(r.studentId) ?? { total: 0, count: 0 }
+    const t = totals.get(r.studentId) ?? { total: 0, count: 0, pcts: [] }
     t.total += r.marksObtained
     t.count++
+    t.pcts.push({ marksObtained: r.marksObtained, maxMarks: r.maxMarks })
     totals.set(r.studentId, t)
   }
 
@@ -138,7 +139,8 @@ export const POST = createHandler({ permission: 'exams.write', body: reportCardG
     [...totals.entries()].map(([studentId, v]) => ({
       studentId,
       totalScore: Math.round(v.total * 100) / 100,
-      average: Math.round((v.total / v.count) * 100) / 100,
+      // Percentage average — raw totals are meaningless when papers have different maxMarks
+      average: averagePct(v.pcts) ?? 0,
       subjectsCount: v.count,
     })),
     r => r.average,

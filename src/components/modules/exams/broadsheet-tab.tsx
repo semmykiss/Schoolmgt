@@ -44,7 +44,7 @@ interface BroadsheetPayload {
 interface ExamListRow { id: string; name: string; term: { name: string; session: { name: string } } }
 interface ClassRow { id: string; name: string; level: number }
 
-export function BroadsheetTab({ canWrite, onGoReports }: { canWrite: boolean; onGoReports: (examId: string, classId: string) => void }) {
+export function BroadsheetTab({ canWrite, onGoReports, onGoMarks }: { canWrite: boolean; onGoReports: (examId: string, classId: string) => void; onGoMarks: () => void }) {
   const qc = useQueryClient()
   const [examId, setExamId] = useState('NONE')
   const [classId, setClassId] = useState('NONE')
@@ -81,7 +81,7 @@ export function BroadsheetTab({ canWrite, onGoReports }: { canWrite: boolean; on
 
   const exportCsv = () => {
     if (!sheet) return
-    const headers = ['Admission No', 'Student', ...sheet.columns.map(c => `${c.subjectName} (/${c.maxMarks})`), 'Total', 'Average', 'Position', 'Grade']
+    const headers = ['Admission No', 'Student', ...sheet.columns.map(c => `${c.subjectName} (/${c.maxMarks})`), 'Total', 'Avg %', 'Position', 'Grade']
     const rows = sheet.rows.map(r => [
       r.admissionNumber, r.fullName,
       ...r.subjects.map(c => c ? (c.absent ? 'AB' : c.marksObtained) : ''),
@@ -161,6 +161,16 @@ export function BroadsheetTab({ canWrite, onGoReports }: { canWrite: boolean; on
         />
       ) : sheet ? (
         <div className="space-y-3">
+          {sheet.rows.every(r => r.scoredSubjects === 0) && (
+            <div className="flex items-center gap-3 rounded-xl border bg-muted/40 p-4 text-sm text-muted-foreground">
+              <Grid3x3 className="h-5 w-5 shrink-0" aria-hidden />
+              <span>
+                No scores have been entered for this class in this exam yet. Enter marks from the{' '}
+                <button type="button" className="font-medium text-foreground underline underline-offset-2" onClick={onGoMarks}>Marks Entry</button>
+                {' '}tab — the broadsheet fills in automatically as scores are saved.
+              </span>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card px-3 py-2.5">
             <Badge variant="outline">{sheet.class.name}</Badge>
             <span className="text-xs text-muted-foreground">{sheet.columns.length} subjects · {sheet.rows.length} students</span>
@@ -171,12 +181,12 @@ export function BroadsheetTab({ canWrite, onGoReports }: { canWrite: boolean; on
             )}
             {sheet.published && <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">Published</Badge>}
             <span className="flex-1" />
-            <span className="text-xs text-muted-foreground">Class average:{' '}
+            <span className="text-xs text-muted-foreground">Class avg:{' '}
               {fmtNum(
                 sheet.rows.filter(r => r.average !== null).reduce((s, r) => s + (r.average ?? 0), 0) /
                 Math.max(1, sheet.rows.filter(r => r.average !== null).length),
-              )}
-            </span>
+                1,
+              )}%</span>
           </div>
 
           <div className="max-h-[70vh] overflow-auto rounded-xl border bg-card [scrollbar-width:thin]">
@@ -192,7 +202,7 @@ export function BroadsheetTab({ canWrite, onGoReports }: { canWrite: boolean; on
                     </th>
                   ))}
                   <th scope="col" className="px-3 py-2 text-right font-medium">Total</th>
-                  <th scope="col" className="px-3 py-2 text-right font-medium">Avg</th>
+                  <th scope="col" className="px-3 py-2 text-right font-medium">Avg %</th>
                   <th scope="col" className="px-3 py-2 text-right font-medium">Pos</th>
                   <th scope="col" className="px-3 py-2 text-center font-medium">Grade</th>
                 </tr>

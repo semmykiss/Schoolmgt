@@ -25,6 +25,18 @@ export function gradeFor(marks: number, maxMarks: number, bands: GradeBandLike[]
 }
 
 /**
+ * Mean of per-subject percentages across subjects with potentially different
+ * maxMarks (e.g. 60-mark mid-term papers and 100-mark final papers).
+ * Never compare raw mark averages against percentage grading bands.
+ */
+export function averagePct(rows: { marksObtained: number; maxMarks: number }[]): number | null {
+  if (rows.length === 0) return null
+  let sum = 0
+  for (const r of rows) sum += r.maxMarks > 0 ? (r.marksObtained / r.maxMarks) * 100 : 0
+  return Math.round((sum / rows.length) * 100) / 100
+}
+
+/**
  * Standard competition ranking on a numeric score (descending).
  * Ties share the same position; the next distinct score skips ahead.
  *   [80, 72, 72, 65] → [1, 2, 2, 4]

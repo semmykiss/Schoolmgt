@@ -119,7 +119,7 @@ export function ReportCardsTab({ canWrite, seed }: { canWrite: boolean; seed?: {
         <EmptyState
           icon={ScrollText}
           title="No report cards yet"
-          description="Generate them from the Broadsheet tab once marks are entered."
+          description="Enter scores in the Marks Entry tab, then open the Broadsheet tab and press “Generate report cards” — they will appear here."
         />
       ) : (
         <div className="overflow-hidden rounded-xl border bg-card">

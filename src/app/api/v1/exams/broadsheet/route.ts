@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
 import { createHandler } from '@/lib/api/handler'
 import { notFound } from '@/lib/api/errors'
-import { rankPositions } from '@/lib/domain/grading'
+import { rankPositions, averagePct } from '@/lib/domain/grading'
 
 /**
  * GET /exams/broadsheet?examId&classId
@@ -66,11 +66,10 @@ export const GET = createHandler({ permission: 'exams.read' }, async ({ user, qu
 
   const rows = students.map(s => {
     const cells = byStudent.get(s.id) ?? new Map()
-    let total = 0
-    let scored = 0
+    const scoredCells: { marksObtained: number; maxMarks: number }[] = []
     const subjects = columns.map(col => {
       const cell = cells.get(col.classSubjectId) ?? null
-      if (cell) { total += cell.marksObtained; scored++ }
+      if (cell) scoredCells.push(cell)
       return cell ? {
         marksObtained: cell.marksObtained, maxMarks: cell.maxMarks, absent: cell.absent, grade: cell.grade, remark: cell.remark,
       } : null
@@ -81,9 +80,10 @@ export const GET = createHandler({ permission: 'exams.read' }, async ({ user, qu
       admissionNumber: s.admissionNumber,
       fullName: [s.firstName, s.lastName].filter(Boolean).join(' '),
       subjects,
-      total,
-      scoredSubjects: scored,
-      average: scored > 0 ? Math.round((total / scored) * 100) / 100 : null,
+      total: scoredCells.reduce((sum, c) => sum + c.marksObtained, 0),
+      scoredSubjects: scoredCells.length,
+      // Percentage average (comparable across subjects with different maxMarks)
+      average: averagePct(scoredCells),
       position: card?.position ?? null,
       grade: card?.grade ?? null,
       reportCardExists: !!card,

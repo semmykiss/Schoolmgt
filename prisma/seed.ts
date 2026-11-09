@@ -257,8 +257,22 @@ async function main() {
     terms.push({ id: t.id, name: t.name })
   }
   const currentTerm = terms[plan.currentIdx]
-  const prevTermIdx = plan.currentIdx > 0 ? plan.currentIdx - 1 : 0
-  const prevTerm = terms[prevTermIdx]
+  const termWord = (n: string) => n === 'SECOND' ? 'Second Term' : n === 'THIRD' ? 'Third Term' : 'First Term'
+  let prevTerm: { id: string; name: string; startDate: string; endDate: string }
+  if (plan.currentIdx > 0) {
+    prevTerm = { id: terms[plan.currentIdx - 1].id, name: terms[plan.currentIdx - 1].name, ...plan.terms[plan.currentIdx - 1] }
+  } else {
+    // Current term is FIRST — the published exam belongs to the previous session's Third Term
+    const prevSession = await db.academicSession.create({ data: {
+      schoolId: school.id, name: `${plan.startYear - 1}/${plan.startYear}`,
+      startDate: `${plan.startYear - 1}-09-08`, endDate: `${plan.startYear}-07-24`, isCurrent: false,
+    } })
+    const prevTermRow = await db.term.create({ data: {
+      schoolId: school.id, sessionId: prevSession.id, name: 'THIRD',
+      startDate: `${plan.startYear}-04-21`, endDate: `${plan.startYear}-07-24`, isCurrent: false,
+    } })
+    prevTerm = { id: prevTermRow.id, name: prevTermRow.name, startDate: `${plan.startYear}-04-21`, endDate: `${plan.startYear}-07-24` }
+  }
 
   // ── classes, sections, subjects ─────────────────────────────────────────
   console.log('🎓 Creating classes & subjects…')
@@ -463,12 +477,13 @@ async function main() {
 
   const gradeFor = (pct: number) => bands.find(b => pct >= b.minScore && pct <= b.maxScore) ?? bands[8]
 
-  // published exam — previous term, JSS 1 A + SS 1 A
+  // published exam — previous term (distinct session/term), JSS 1 A + SS 1 A
+  const prevTermEndDate = new Date(`${prevTerm.endDate}T12:00:00`)
   const publishedExam = await db.exam.create({ data: {
     schoolId: school.id, termId: prevTerm.id, examTypeId: examTypeFinal.id,
-    name: `${prevTerm.name.replace('_', ' ').charAt(0) + prevTerm.name.slice(1).toLowerCase()} Examination — ${plan.sessionName}`,
-    startDate: prevTerm === terms[plan.currentIdx] ? iso(addDays(new Date(), -30)) : prevTerm === terms[1] ? `${plan.terms[1].startDate}` : plan.terms[0].startDate,
-    endDate: iso(addDays(new Date(), -18)), publishResults: true, publishClassScores: true,
+    name: `${termWord(prevTerm.name)} Examination`,
+    startDate: iso(addDays(prevTermEndDate, -28)), endDate: iso(addDays(prevTermEndDate, -7)),
+    publishResults: true, publishClassScores: true,
   } })
   const resultExamClasses: { secKey: string; classKey: string; codes: string[] }[] = [
     { secKey: 'JSS 1 A', classKey: 'JSS 1', codes: jssCodes }, { secKey: 'SS 1 A', classKey: 'SS 1', codes: ssCodes },
@@ -480,7 +495,7 @@ async function main() {
       await db.examSchedule.create({ data: {
         schoolId: school.id, examId: publishedExam.id,
         classSubjectId: classSubjects[`${classKey}:${code}`],
-        date: iso(addDays(new Date(), -25)), startTime: '09:00', endTime: '11:00',
+        date: iso(addDays(prevTermEndDate, -14)), startTime: '09:00', endTime: '11:00',
         maxMarks: 100, passMarks: 40,
       } })
       for (const s of roster) {
@@ -517,17 +532,17 @@ async function main() {
   // current term mid-term exam (unpublished, no marks yet)
   const midTermExam = await db.exam.create({ data: {
     schoolId: school.id, termId: currentTerm.id, examTypeId: examTypeMid.id,
-    name: `${currentTerm.name === 'SECOND' ? 'Second' : currentTerm.name === 'THIRD' ? 'Third' : 'First'} Term Mid-Term Test — ${plan.sessionName}`,
+    name: `${termWord(currentTerm.name)} Mid-Term Test`,
     startDate: nextWeekdays(1)[0], endDate: iso(addDays(new Date(), 7)),
     publishResults: false, publishClassScores: false,
   } })
   const midDates = nextWeekdays(4)
-  jssCodes.slice(0, 4).forEach((code, i) => {
-    db.examSchedule.create({ data: {
+  for (const [i, code] of jssCodes.slice(0, 4).entries()) {
+    await db.examSchedule.create({ data: {
       schoolId: school.id, examId: midTermExam.id, classSubjectId: classSubjects[`JSS 1:${code}`],
       date: midDates[i % midDates.length], startTime: '09:00', endTime: '10:30', maxMarks: 60, passMarks: 25,
-    } }).catch(() => null)
-  })
+    } })
+  }
 
   // staff attendance today
   const today = todayIso()

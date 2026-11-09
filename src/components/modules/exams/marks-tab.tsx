@@ -166,6 +166,8 @@ export function MarksTab({ canMark }: { canMark: boolean }) {
   }
 
   const locked = sheet?.exam.publishResults ?? false
+  // Locked (published) exams and read-only roles still see the full sheet — just not editable.
+  const editable = canMark && !locked
 
   return (
     <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className="space-y-4">
@@ -223,13 +225,14 @@ export function MarksTab({ canMark }: { canMark: boolean }) {
         />
       ) : selectedClass && papersByClass.get(classId)!.length === 0 ? (
         <EmptyState icon={FileSpreadsheet} title="No papers scheduled" description="Add papers for this class from an exam's timetable first." />
-      ) : sheet && locked ? (
-        <div className="flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700 dark:text-amber-400">
-          <Lock className="h-5 w-5 shrink-0" aria-hidden />
-          Results are published for this exam — scores are locked. Unpublish from the Exams tab to edit.
-        </div>
       ) : sheet ? (
         <div className="space-y-3">
+          {locked && (
+            <div className="flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700 dark:text-amber-400">
+              <Lock className="h-5 w-5 shrink-0" aria-hidden />
+              <span>Results are published for this exam — scores below are read-only. Unpublish from the Exams tab to make changes.</span>
+            </div>
+          )}
           {/* header strip */}
           <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card px-3 py-2.5">
             <span className="text-sm font-medium">{sheet.subject.name}</span>
@@ -268,7 +271,7 @@ export function MarksTab({ canMark }: { canMark: boolean }) {
                       <p className="truncate text-sm font-medium">{s.fullName}</p>
                       <p className="text-xs text-muted-foreground">{s.admissionNumber}</p>
                     </div>
-                    {canMark ? (
+                    {editable ? (
                       <div className="flex w-full items-center gap-2 sm:w-60">
                         <Input
                           inputMode="decimal"
@@ -325,7 +328,7 @@ export function MarksTab({ canMark }: { canMark: boolean }) {
             </ul>
           </div>
 
-          {canMark && (
+          {editable && (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-muted-foreground">
                 {isFetching ? 'Refreshing…' : 'Grades are assigned automatically from the default grading scale when you save.'}

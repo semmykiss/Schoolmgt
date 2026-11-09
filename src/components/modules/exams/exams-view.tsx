@@ -61,7 +61,7 @@ export function ExamsView() {
           <MarksTab canMark={canMark} />
         </TabsContent>
         <TabsContent value="broadsheet" className="mt-4">
-          <BroadsheetTab canWrite={canWrite} onGoReports={(examId, classId) => { setReportsSeed({ examId, classId }); setTab('report-cards') }} />
+          <BroadsheetTab canWrite={canWrite} onGoMarks={() => setTab('marks')} onGoReports={(examId, classId) => { setReportsSeed({ examId, classId }); setTab('report-cards') }} />
         </TabsContent>
         <TabsContent value="report-cards" className="mt-4">
           <ReportCardsTab canWrite={canWrite} seed={reportsSeed} />
